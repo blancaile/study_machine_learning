@@ -1,3 +1,5 @@
+#https://tutorials.chainer.org/ja/08_Introduction_to_NumPy.html
+
 from numpy.core.fromnumeric import shape
 import tensorflow as tp
 import numpy as np
