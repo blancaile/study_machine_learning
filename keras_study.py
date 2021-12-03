@@ -6,11 +6,12 @@ from sklearn import model_selection
 from sklearn.datasets import load_iris
 from tensorflow.keras.utils import to_categorical
 from sklearn import preprocessing
+from tensorflow.python.keras.layers.core import Dropout
 
 x, t = load_iris(return_X_y=True)
 
 #print("x:", x.shape)
-print("t:", t.shape)
+#print("t:", t.shape)
 
 #データの標準化
 x = preprocessing.scale(x)
@@ -36,25 +37,24 @@ import numpy as np
 
 n_in = 4
 n_out = 3
-hidden_units = 10
-hidden_layers = 1
-learning_late = 0.01
+hidden_units = 16
+hidden_layers = 4
+learning_late = 0.05
 
 
 model = Sequential()
 
-model.add(Dense(n_in, activation = "relu"))
+model.add(Dense(hidden_units, input_dim=n_in, activation="relu"))
 
 for i in range(hidden_layers):
     model.add(Dense(hidden_units, activation = "relu"))
 
-
 model.add(Dense(n_out, activation="softmax"))
-
+#多クラス分類はsoftmaxとcategorical crossentropyがよく使われる
 model.compile(loss = "categorical_crossentropy", optimizer = SGD(lr = learning_late), metrics=["accuracy"])
 
-n_epoch = 30
-n_batchsize = 16
+n_epoch = 48
+n_batchsize = 32
 
 
 history = model.fit(x_train, t_train, epochs = n_epoch, batch_size = n_batchsize, validation_split=0.3)
@@ -79,30 +79,20 @@ plt.legend(['Train', 'Test'], loc='upper left')
 plt.show()
 
 
-print("Prediction///////////////")
+#予測
+print("Prediction")
 predict = model.predict(x_test)
-P = np.empty(predict.shape)
-for i in predict:
-    if i[0] > i[1] and i[0] > i[2]:
-        np.append(P, [[1,0,0]])
-    elif i[1] > i[0] and i[1] > i[2]:
-        np.append(P, [[0,1,1]])
-    else:
-        np.append(P, [[0, 0, 1]])
 
+j=0
+k=0
+for i, test in enumerate(predict):
 
-print(x_test)#データ
-print(predict)#予想結果
-print(predict.shape)
-print(t_test)#答え
-print(P)
+    if (t_test[i] == np.round(test)).all():
+        j+=1
+    k+=1
 
-#print(predict[1])
-P = to_categorical(predict)
-print(P.shape)
-#print(t_test[1])
-#if P[0] == t_test[0]:
-#    print("合致")
+print("正解率:",round(100 * j / x_test.shape[0], 1), "%")
+#だいたい80%~97%
 
 
 
