@@ -64,9 +64,12 @@ def slided_view2D(arr, N=1440):
 BUF = pd.read_csv(r"C:\github_folder\study_machine_learning\cryptocurrency_bot\datasets\edit_btcusdt_f.csv")
 EUF = pd.read_csv(r"C:\github_folder\study_machine_learning\cryptocurrency_bot\datasets\edit_ethusdt_f.csv")
 
+print("hello")
 #説明変数を作成
 BUF_feature = make_feature(BUF)
 EUF_feature = make_feature(EUF)
+
+window_size = 1440
 
 #目的変数を作成
 train= make_training_data(EUF["close"], 1, 0.0001, -0.0001)
@@ -81,40 +84,22 @@ feature = pd.concat([BUF_feature, EUF_feature], axis=1)
 feature = feature.to_numpy()
 feature = scipy.stats.zscore(feature)
 
-def slided_view2D(arr, N= 1440):
-    r, c = arr.shape
-    rs, cs = arr.strides
-    strided = np.lib.stride_tricks.as_strided
-    return strided(arr, shape=(r-N+1, N, c), strides=(rs, rs, cs))
-
-feature = slided_view2D(feature)
-
 
 #ウィンドウ作成
-#最初からwindow-1まではNaN
-#feature_window = feature.rolling(window=1440).count()
-print(feature)
-print(feature.shape)
-print(type(feature))
-#print(feature.values)
+data = []
+window_size = 1440
 
-#batch dataset
-#feature_window = tf.keras.preprocessing.timeseries_dataset_from_array(feature.values, None, sequence_length = 1440, batch_size=1)
 
-#feature_window = sliding_window_view(feature.values, 1440, axis=1)
 
-#print(feature.values)
-print("/////////////////")
-#for fw in feature_window:
-#fw = tfds.as_dataframe(feature_window, None)
-#fw = np.stack(list(feature_window))
+for i in range(window_size, len(feature)):  #重い遅い
+    data.append(feature[i - window_size: i, :])
+    #print(type(data))
 
-#print(type(feature_window))
 
-#print(fw)
-#print(feature.values.shape)
-#print(feature_window.shape)
-#標準化
+slide_feature = np.array(data)
+print(slide_feature)
+print(slide_feature.shape)
+
 
 
 #モデル作成
