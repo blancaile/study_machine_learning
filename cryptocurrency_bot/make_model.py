@@ -11,19 +11,25 @@ from tensorflow.keras.models import Sequential
 from tensorflow.keras.optimizers import Adam
 from tensorflow.python.keras.layers.core import Dropout
 import matplotlib.pyplot as plt
-
-
+from sklearn.model_selection import train_test_split
+from keras.callbacks import EarlyStopping
+import sys
 
 
 #受け取ったデータから特徴量を生成
 def make_feature(df):
     df["rsi9"] = ta.RSI(df["close"], timeperiod=9)
-    df["sma40"] = ta.SMA(df["close"], timeperiod=40)
+    df["ma35"] = ta.MA(df["close"], timeperiod=35)
+    df["wma5"] = ta.WMA(df["close"], timeperiod=5)
+    df["wma20"] = ta.WMA(df["close"], timeperiod=20) 
+    df["upperband"], df["middleband"], df["lowerband"] = ta.BBANDS(df["close"], timeperiod=20)
+    df["sar"] = ta.SAR(df["high"], df["low"], acceleration=0.02, maximum=0.2)
+    df["adosc"] = ta.ADOSC(df["high"], df["low"], df["close"], df["Volume"], fastperiod=3, slowperiod=10)
+    df["trix"] = ta.TRIX(df["close"], timeperiod=10)
     #df["upperband"], df["middlebabd"]
     #return df.dropna(how="any") #後でnanの個数を使う
     #print(df)
     return df.drop(["open", "high", "low", "close", "Volume", "tradecount"], axis=1)
-
 
 
 
@@ -95,35 +101,37 @@ def modelplot(history):
 
 
 #ファイルの読み込み
-BUF = pd.read_csv(os.getcwd() + r"\cryptocurrency_bot\datasets\edit_btcusdt_f.csv")
+#BUF = pd.read_csv(os.getcwd() + r"\cryptocurrency_bot\datasets\edit_btcusdt_f.csv")
 EUF = pd.read_csv(os.getcwd() + r"\cryptocurrency_bot\datasets\edit_ethusdt_f.csv")
 
 
 #説明変数を生成
-BUF_feature = make_feature(BUF.iloc[int(len(BUF)/1.1):, :])
-EUF_feature = make_feature(EUF.iloc[int(len(EUF)/1.1):, :])
-
+#BUF_feature = make_feature(BUF.iloc[int(len(BUF)/1.1):, :]) #データが入りきらないとき
+EUF_feature = make_feature(EUF.iloc[int(len(EUF)/3):, :])
+#EUF_feature = make_feature(EUF)
 
 #目的変数を生成
 mlater = 5 #何分後のup,downを予測するか
 
 
 #train= make_training_data(EUF["close"].iloc[int(len(EUF)/1.1):], mlater, 0.0005, -0.0005)
-train= make_training_data(EUF["close"], mlater, 0.001, -0.001)
+train= make_training_data(EUF["close"], mlater, 0.0013, -0.0013)
 #print(train)
 
-train = train.iloc[int(len(EUF)/1.1):]
+train = train.iloc[int(len(EUF)/3):]   #データが入りきらないとき
 train = train.to_numpy()
 u, counts = np.unique(train, return_counts=True) #同じ出現率がよい
 print(u)      #0,     1,    2
-print(counts) #[19501 19521 19249]
+print(counts) #[164008 169315 165253]
 #one hot encoding
 train = to_categorical(train)
 
+#sys.exit()
 
 
 #説明変数の結合
-feature = pd.concat([BUF_feature, EUF_feature], axis=1)
+#feature = pd.concat([BUF_feature, EUF_feature], axis=1)
+feature = pd.DataFrame(EUF_feature)
 nancount = len(feature[feature.isnull().any(axis=1)])
 
 #print(nancount)
@@ -140,7 +148,7 @@ feature = scipy.stats.zscore(feature)
 
 
 #ウィンドウ作成
-window_size = 1440
+window_size = 60*5
 
 
 slide_feature = strided_axis0(feature, window_size)
@@ -152,13 +160,17 @@ train = np.delete(train, [i for i in range(window_size + nancount - 1)], axis=0)
 print(train.shape)
 
 
+
+#x_train, x_test, t_train, t_test = train_test_split(slide_feature, train, test_size=0.1, random_state=0)
+
+
 #モデル作成
 input_dim = slide_feature.shape[2]
 output_dim = 3
-hidden_units = 100
+hidden_units = 10
 learning_rate = 0.001
 batch_size = 32
-epoch = 10
+epoch = 50
 
 
 
@@ -176,6 +188,7 @@ model.summary()
 
 
 #学習
+#early_stopping = EarlyStopping(monitor='val_loss', patience=2)
 
 history = model.fit(
     slide_feature, train,
@@ -184,4 +197,19 @@ history = model.fit(
     validation_split=0.1
 )
 
+
+# print("Prediction")
+# predict = model.predict(x_test)
+# j=0
+# k=0
+# for i, test in enumerate(predict):
+
+#     if (t_test[i] == np.round(test)).all():
+#         j+=1
+#     k+=1
+
+# print("正解率:",round(100 * j / x_test.shape[0], 1), "%")
+
+
 modelplot(history)
+
