@@ -17,8 +17,11 @@ x, t = load_iris(return_X_y=True)
 x = preprocessing.scale(x)
 
 #one hot encodingに変換
+print(t)
+print(t.shape)
 t = to_categorical(t)
 print("t:", t.shape)
+print(t)
 
 
 #データセットの分割

@@ -1,41 +1,47 @@
-from operator import ilshift
+import os
 import numpy as np
 import pandas as pd
-import os
-from sklearn.utils import shuffle
 import talib as ta
-from numpy.lib.stride_tricks import sliding_window_view
 import tensorflow as tf
-from tensorflow.python.keras.backend import print_tensor
-from tensorflow.python.ops.array_ops import sequence_mask
-import tensorflow_datasets as tfds
-from sklearn.preprocessing import StandardScaler
+from tensorflow.python.keras.utils.np_utils import to_categorical
 import scipy.stats
+from tensorflow import keras
+from tensorflow.keras.layers import Dense, Activation
+from tensorflow.keras.models import Sequential
+from tensorflow.keras.optimizers import Adam
+from tensorflow.python.keras.layers.core import Dropout
+import matplotlib.pyplot as plt
+
 
 
 
 #受け取ったデータから特徴量を生成
 def make_feature(df):
     df["rsi9"] = ta.RSI(df["close"], timeperiod=9)
+    df["sma40"] = ta.SMA(df["close"], timeperiod=40)
+    #df["upperband"], df["middlebabd"]
     #return df.dropna(how="any") #後でnanの個数を使う
-    return df
+    #print(df)
+    return df.drop(["open", "high", "low", "close", "Volume", "tradecount"], axis=1)
 
 
 
-#up,stay,downの閾値とxを受け取りx分後のethのcloseの変化率を３値(1,0,-1)に分類する
+
+#up,stay,downの閾値とxを受け取りx分後のethのcloseの変化率を３値(2,1,0)に分類する
 def make_training_data(ed, x = 1, up = 0.0001, down = -0.0001):
     e_d = ed.to_dict() #dictionaryの方が早い
-
+    #print(e_d)
+    #print(e_d[100], " ", e_d[101], " ", (e_d[101] - e_d[100])/e_d[100])
     for i in range(len(e_d) - x):
         
         ratio = (e_d[i+x] - e_d[i]) / e_d[i]
         #print("ratio is ", ratio)
         if ratio > up:
-            e_d[i] = 1
+            e_d[i] = 2
         elif ratio < down:
-            e_d[i] = -1
-        else:
             e_d[i] = 0
+        else:
+            e_d[i] = 1
 
     #print(type(e_d))
     #eth_ratio = pd.DataFrame(e_d, index=["i",]) #遅い
@@ -69,22 +75,51 @@ def strided_axis0(a, L):
     return np.lib.stride_tricks.as_strided(a, shape=(nd0,L,n), strides=(s0,s0,s1))
 
 
+#結果の描画
+def modelplot(history):
+    plt.plot(history.history['accuracy'])
+    plt.plot(history.history['val_accuracy'])
+    plt.title('Model accuracy')
+    plt.ylabel('Accuracy')
+    plt.xlabel('Epoch')
+    plt.legend(['Train', 'Test'], loc='upper left')
+    plt.show()
+
+    plt.plot(history.history['loss'])
+    plt.plot(history.history['val_loss'])
+    plt.title('Model loss')
+    plt.ylabel('Loss')
+    plt.xlabel('Epoch')
+    plt.legend(['Train', 'Test'], loc='upper left')
+    plt.show()
 
 
 #ファイルの読み込み
-BUF = pd.read_csv(r"C:\github_folder\study_machine_learning\cryptocurrency_bot\datasets\edit_btcusdt_f.csv")
-EUF = pd.read_csv(r"C:\github_folder\study_machine_learning\cryptocurrency_bot\datasets\edit_ethusdt_f.csv")
+BUF = pd.read_csv(os.getcwd() + r"\cryptocurrency_bot\datasets\edit_btcusdt_f.csv")
+EUF = pd.read_csv(os.getcwd() + r"\cryptocurrency_bot\datasets\edit_ethusdt_f.csv")
 
 
 #説明変数を生成
-BUF_feature = make_feature(BUF)
-EUF_feature = make_feature(EUF)
+BUF_feature = make_feature(BUF.iloc[int(len(BUF)/1.1):, :])
+EUF_feature = make_feature(EUF.iloc[int(len(EUF)/1.1):, :])
 
 
 #目的変数を生成
-mlater = 1 #何分後のup,downを予測するか
-train= make_training_data(EUF["close"], mlater, 0.0001, -0.0001)
+mlater = 5 #何分後のup,downを予測するか
+
+
+#train= make_training_data(EUF["close"].iloc[int(len(EUF)/1.1):], mlater, 0.0005, -0.0005)
+train= make_training_data(EUF["close"], mlater, 0.001, -0.001)
+#print(train)
+
+train = train.iloc[int(len(EUF)/1.1):]
 train = train.to_numpy()
+u, counts = np.unique(train, return_counts=True) #同じ出現率がよい
+print(u)      #0,     1,    2
+print(counts) #[19501 19521 19249]
+#one hot encoding
+train = to_categorical(train)
+
 
 
 #説明変数の結合
@@ -109,22 +144,44 @@ window_size = 1440
 
 
 slide_feature = strided_axis0(feature, window_size)
-#print(slide_feature)
 print(slide_feature.shape)
 
 
-
 #教師データと訓練データのサイズ調整
-train = np.delete(train, [i for i in range(window_size + nancount -1)], axis=0)
-#print("////////////////")
-#print(train)
+train = np.delete(train, [i for i in range(window_size + nancount - 1)], axis=0)
 print(train.shape)
 
 
-
 #モデル作成
+input_dim = slide_feature.shape[2]
+output_dim = 3
+hidden_units = 100
+learning_rate = 0.001
+batch_size = 32
+epoch = 10
+
+
+
+model = Sequential()
+
+model.add(tf.compat.v1.keras.layers.CuDNNLSTM(
+    hidden_units,
+    input_shape = (window_size, input_dim),
+    return_sequences = False
+))
+#model.add(Dropout(0.3))
+model.add(Dense(output_dim,  activation="softmax"))
+model.compile(loss="categorical_crossentropy", optimizer=Adam(learning_rate=learning_rate), metrics=["accuracy"])
+model.summary()
+
 
 #学習
 
+history = model.fit(
+    slide_feature, train,
+    batch_size=batch_size,
+    epochs=epoch,
+    validation_split=0.1
+)
 
-
+modelplot(history)
