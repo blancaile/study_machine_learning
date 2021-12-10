@@ -17,8 +17,11 @@ https://www.cryptodatadownload.com/data/binance/
 bitcoinのup,stayを特徴量にいれてみる
 標準化
 
-
 つまり、標準化により標準正規分布の中での異常値(outlier)の表現ができるため、完全に異常値の処理ができている場合は正規化を、それではない場合もしくは異常値判断をしたいは標準化してみることが一般的です。
 ３分足がよい
 
+
+lstmの他にもlightgbm
+ラグ特徴量
+移動平均線乖離率
 

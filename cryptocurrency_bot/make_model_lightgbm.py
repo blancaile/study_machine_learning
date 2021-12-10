@@ -14,23 +14,35 @@ import matplotlib.pyplot as plt
 from sklearn.model_selection import train_test_split
 from keras.callbacks import EarlyStopping
 import sys
-
+import lightgbm as lgb
+from sklearn.metrics import accuracy_score
+import datetime
 
 
 #受け取ったデータから特徴量を生成
 def make_feature(df):
+    df = df.iloc[::-1] #反転
+    df["datetime"] = pd.to_datetime(df["date"])
+    df["minute"] = df["datetime"].dt.minute
+    df["hour"] = df["datetime"].dt.hour
+    df["dayofweek"] = df["datetime"].dt.dayofweek
+    df.drop(["date","datetime","unix", "symbol", "Volume USDT"], axis=1, inplace=True)
+    print(df.head())
+    
     df["rsi9"] = ta.RSI(df["close"], timeperiod=9)
     df["ma35"] = ta.MA(df["close"], timeperiod=35)
     df["wma5"] = ta.WMA(df["close"], timeperiod=5)
     df["wma20"] = ta.WMA(df["close"], timeperiod=20) 
     df["upperband"], df["middleband"], df["lowerband"] = ta.BBANDS(df["close"], timeperiod=20)
     df["sar"] = ta.SAR(df["high"], df["low"], acceleration=0.02, maximum=0.2)
-    df["adosc"] = ta.ADOSC(df["high"], df["low"], df["close"], df["Volume"], fastperiod=3, slowperiod=10)
+    df["adosc"] = ta.ADOSC(df["high"], df["low"], df["close"], df["Volume ETH"], fastperiod=3, slowperiod=10)
     df["trix"] = ta.TRIX(df["close"], timeperiod=10)
     #df["upperband"], df["middlebabd"]
     #return df.dropna(how="any") #後でnanの個数を使う
     #print(df)
-    return df.drop(["open", "high", "low", "close", "tradecount"], axis=1)
+    #return df.drop(["open", "high", "low", "close", "tradecount"], axis=1)
+    sys.exit()
+    return df
 
 
 
@@ -103,13 +115,13 @@ def modelplot(history):
 
 #ファイルの読み込み
 #BUF = pd.read_csv(os.getcwd() + r"\cryptocurrency_bot\datasets\edit_btcusdt_f.csv")
-EUF = pd.read_csv(os.getcwd() + r"\cryptocurrency_bot\datasets\edit_ethusdt_f.csv")
+EUF = pd.read_csv(os.getcwd() + r"\cryptocurrency_bot\datasets\ethusdt_f.csv")
 
 
 #説明変数を生成
 #BUF_feature = make_feature(BUF.iloc[int(len(BUF)/1.1):, :]) #データが入りきらないとき
-EUF_feature = make_feature(EUF.iloc[int(len(EUF)/3):, :])
-#EUF_feature = make_feature(EUF) #本当ならすべてのデータを取り込みたい
+#EUF_feature = make_feature(EUF.iloc[int(len(EUF)/3):, :])
+EUF_feature = make_feature(EUF) #本当ならすべてのデータを取り込みたい
 
 #目的変数を生成
 mlater = 5 #何分後のup,downを予測するか
@@ -119,7 +131,7 @@ mlater = 5 #何分後のup,downを予測するか
 train= make_training_data(EUF["close"], mlater, 0.0013, -0.0013)
 #print(train)
 
-train = train.iloc[int(len(EUF)/3):]   #データが入りきらないとき
+#train = train.iloc[int(len(EUF)/3):]   #データが入りきらないとき
 train = train.to_numpy()
 u, counts = np.unique(train, return_counts=True) #同じ出現率がよい
 print(u)      #0,     1,    2
@@ -127,7 +139,7 @@ print(counts) #[164008 169315 165253]
 
 #lightgbmはいらない
 #one hot encoding
-train = to_categorical(train)
+#train = to_categorical(train)
 
 #sys.exit()
 
@@ -137,82 +149,66 @@ train = to_categorical(train)
 feature = pd.DataFrame(EUF_feature)
 nancount = len(feature[feature.isnull().any(axis=1)])
 
-#print(nancount)
+print(nancount)
 feature = feature.dropna(how="any").to_numpy()
 
 
 #目的変数データ生成時にできたnanを含む行を説明変数データから削除
-feature = np.delete(feature, [i for i in range(len(feature) - mlater, len(feature))], axis=0)
+slide_feature = np.delete(feature, [i for i in range(len(feature) - mlater, len(feature))], axis=0)
 
-
+print(nancount)
 #標準化
-feature = scipy.stats.zscore(feature)
+#feature = scipy.stats.zscore(feature)
+#slide_feature = scipy.stats.zscore(feature)
+print(feature.shape)
 
 
 #ウィンドウ作成
 window_size = 60*5
 
 
-slide_feature = strided_axis0(feature, window_size)
-print("slide feature is ", slide_feature.shape)
+#slide_feature = strided_axis0(feature, window_size)
+#print(slide_feature.shape)
 
 
 #教師データと訓練データのサイズ調整
-train = np.delete(train, [i for i in range(window_size + nancount - 1)], axis=0)
-print("train shape is ", train.shape)
+#train = np.delete(train, [i for i in range(window_size + nancount - 1)], axis=0)
+train = np.delete(train, [i for i in range(nancount)], axis=0)
+print(train.shape)
 
 
 
-#x_train, x_test, t_train, t_test = train_test_split(slide_feature, train, test_size=0.1, random_state=0, shuffle=False)
+x_train, x_test, t_train, t_test = train_test_split(slide_feature, train, test_size=0.1, random_state=0, shuffle=False)
+x_train, x_eval, t_train, t_eval = train_test_split(x_train, t_train, test_size=0.1, random_state=0, shuffle=False)
 
+lgb_train = lgb.Dataset(x_train, t_train)
+lgb_eval = lgb.Dataset(x_eval, t_eval, reference=lgb_train)
 
-#モデル作成
-input_dim = slide_feature.shape[2]
-output_dim = 3
-hidden_units = 10
-learning_rate = 0.001
-batch_size = 32
-epoch = 50
+params = {
+    "task": "train",
+    "boosting": "gbdt",
+    #"objective": "regression",
+    "objective": "multiclass",
+    "num_class": 3,
+    "metric": "multi_error",
+    "num_levels":78,
+    "drop_rate": 0.05,
+    "learning_rate": 0.01,
+    "seed": 0,
+    "verbose": 0,
+    "device": "gpu"
+}
 
+#ValueError: Input numpy.ndarray must be 2 dimensional
+model_lgb = lgb.train(params=params,train_set=lgb_train,
+num_boost_round=100,early_stopping_rounds=50,
+verbose_eval=10,valid_sets=lgb_eval)
 
+y_pred = model_lgb.predict(x_test,num_iteration=model_lgb.best_iteration)
+print(y_pred)
 
+y_pred_fin=[]
+for x in y_pred:
+    y_pred_fin.append(round(x).astype(int))
 
-model = Sequential()
-
-model.add(tf.compat.v1.keras.layers.CuDNNLSTM(
-    hidden_units,
-    batch_input_shape = (None, window_size, input_dim),
-    return_sequences = False
-))
-#model.add(Dropout(0.3))
-model.add(Dense(output_dim,  activation="softmax"))
-model.compile(loss="categorical_crossentropy", optimizer=Adam(learning_rate=learning_rate), metrics=["accuracy"])
-model.summary()
-
-
-#学習
-#early_stopping = EarlyStopping(monitor='val_loss', patience=2)
-
-history = model.fit(
-    slide_feature, train,
-    batch_size=batch_size,
-    epochs=epoch,
-    validation_split=0.1
-)
-
-
-# print("Prediction")
-# predict = model.predict(x_test)
-# j=0
-# k=0
-# for i, test in enumerate(predict):
-
-#     if (t_test[i] == np.round(test)).all():
-#         j+=1
-#     k+=1
-
-# print("正解率:",round(100 * j / x_test.shape[0], 1), "%")
-
-
-modelplot(history)
-
+print(accuracy_score(t_test, y_pred_fin))
