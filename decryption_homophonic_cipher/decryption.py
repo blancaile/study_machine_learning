@@ -33,10 +33,10 @@ print(hist_code1["frequency"])
 
 
 #連続した文字列の取得
-hist_code2 = pd.DataFrame(columns=["index", "count"])
+# hist_code2 = pd.DataFrame(columns=["index", "count"])
 
-k = 0
-#for i in range(32):
+# k = 0
+# for i in range(32):
 #   for j in range(32):
 #        if i < 10 and j < 10:
 #            hist_code2.loc[k] = ["0" + str(i) + " " + "0" + str(j), data.count("0" + str(i) + " " + "0" + str(j))]
@@ -48,32 +48,13 @@ k = 0
 #            hist_code2.loc[k] = [str(i) + " " + str(j), data.count(str(i) + " " + str(j))]
 #        k+=1
 
-#hist2 = hist_code2.sort_values("count", ascending=False)
+# hist2 = hist_code2.sort_values("count", ascending=False)
 
-#print(hist2.head(20))
+# print(hist2.head(30))
 
-#      index count
-    #312   12 28     8
-    #914   28 18     7
-    #1020  31 28     7
-#679   21 07     7
-#44    01 12     6
-#405   12 21     5
-#346   10 26     5
-#970   30 10     5
-#321   10 01     4
-#922   28 26     4
-#1013  31 21     4
-#309   09 21     4
-#696   21 24     4
-#680   21 08     4
-#154   04 26     4
-#606   18 30     3
-#39    01 07     3
-#812   25 12     3
-#287   08 31     3
 
-hist_code3 = pd.DataFrame(columns=["index", "count"])
+
+# hist_code3 = pd.DataFrame(columns=["index", "count"])
 
 # h = 0
 # for i in range(32):
@@ -97,11 +78,35 @@ hist_code3 = pd.DataFrame(columns=["index", "count"])
 #             else:
 #                 hist_code3.loc[h] = [str(i) + " " + str(j) + " " + str(k), data.count(str(i) + " " + str(j) + " " + str(k))]
 #             h+=1
-#             print("\r"+str(h), end="")
+#             print("\r"+str(h)+" / "+str(32*32*32), end="")
 
 # hist3 = hist_code3.sort_values("count", ascending=False)
+# print(" ")
+# print(hist3.head(30))
 
-#print(hist3.head(20))
+
+
+#      index count
+    #312   12 28     8
+    #914   28 18     7
+    #1020  31 28     7
+#679   21 07     7
+#44    01 12     6
+#405   12 21     5
+#346   10 26     5
+#970   30 10     5
+#321   10 01     4
+#922   28 26     4
+#1013  31 21     4
+#309   09 21     4
+#696   21 24     4
+#680   21 08     4
+#154   04 26     4
+#606   18 30     3
+#39    01 07     3
+#812   25 12     3
+#287   08 31     3
+
 
 #          index count
     #13185   12 28 1     4
@@ -142,7 +147,7 @@ print(type(dfdata[0])) #str
 
 
 for i in range(len(dfdata)-2):
-    if dfdata[i] == "28" and dfdata[i+1] == "01" or dfdata[i+1] == "18" and dfdata[i+2] == "01" or dfdata[i+2] == "18":
+    if dfdata[i] == "28" and (dfdata[i+1] == "01" or dfdata[i+1] == "18") and (dfdata[i+2] == "01" or dfdata[i+2] == "18"):
         print(dfdata[i-2] + " " + dfdata[i-1] + " " + dfdata[i] + " " + dfdata[i+1] + " " + dfdata[i+2])
 
 # 05 04 31 28 18
@@ -175,3 +180,8 @@ for i in range(len(dfdata)-2):
 # 21 31 27 04 18
 
 
+df = pd.DataFrame(np.arange(100))
+print(df)
+
+df = df.drop(i for i in range(len(df) - 5, len(df)))
+print(df)
