@@ -83,7 +83,9 @@ def make_stride(x,window_size):
             axis=1
         )
     #print(y.head())
-    
+        print("\r"+str(i)+" / "+str(window_size), end="")
+        
+    print("")
     return y
 
 
@@ -173,14 +175,14 @@ window_size = 3
 
 
 #slide_feature = strided_axis0(feature, window_size)
-print("feature shape is ",feature.shape)
+#print("feature shape is ",feature.shape)
 
 
 #教師データと訓練データのサイズ調整
 #train = np.delete(train, [i for i in range(window_size + nancount - 1)], axis=0)
 #train = np.delete(train, [i for i in range(nancount)], axis=0) #ndarray, lightgbm
 #train = train.drop(i for i in range(nancount))
-print("train shape is ",train.shape)
+#print("train shape is ",train.shape)
 
 
 
@@ -194,17 +196,17 @@ concat_feature_train.reset_index(drop=True, inplace=True)
 #ラグ特徴量を生成
 x = make_stride(concat_feature_train, window_size=window_size)
 
-print(x)
-sys.exit()
-#ラグ特徴量を含めた説明変数を作成
+#print("feature shape is ", x.shape)
+#sys.exit()
 
 
 
-#x_train, x_test, t_train, t_test = train_test_split(slide_feature, train, test_size=0.1, random_state=0, shuffle=False)
-#x_train, x_eval, t_train, t_eval = train_test_split(x_train, t_train, test_size=0.1, random_state=0, shuffle=False)
 
-#lgb_train = lgb.Dataset(x_train, t_train)
-#lgb_eval = lgb.Dataset(x_eval, t_eval, reference=lgb_train)
+x_train, x_test, t_train, t_test = train_test_split(x.drop("train", axis=1), x["train"], test_size=0.1, random_state=0, shuffle=False)
+x_train, x_eval, t_train, t_eval = train_test_split(x_train, t_train, test_size=0.1, random_state=0, shuffle=False)
+
+lgb_train = lgb.Dataset(x_train, t_train)
+lgb_eval = lgb.Dataset(x_eval, t_eval, reference=lgb_train)
 
 params = {
     "task": "train",
@@ -214,7 +216,8 @@ params = {
     "num_class": 3,
     "metric": "multi_error",
     "device": "gpu",
-    "bagging_freq": 1
+    "bagging_freq": 1,
+    "bagging_fraction": 0.9
 }
 
 #ValueError: Input numpy.ndarray must be 2 dimensional
@@ -223,8 +226,6 @@ model_lgb = lgb.train(params=params,train_set=lgb_train,verbose_eval=10,valid_se
 y_pred = model_lgb.predict(x_test,num_iteration=model_lgb.best_iteration)
 print(y_pred)
 
-y_pred_fin=[]
-for x in y_pred:
-    y_pred_fin.append(round(x).astype(int))
 
-print(accuracy_score(t_test, y_pred_fin))
+
+
