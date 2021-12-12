@@ -127,11 +127,11 @@ EUF = pd.read_csv(os.getcwd() + r"\cryptocurrency_bot\datasets\ethusdt_f.csv")
 EUF_feature = make_feature(EUF) #本当ならすべてのデータを取り込みたい
 
 #目的変数を生成
-mlater = 1 #何分後のup,downを予測するか
+mlater = 5 #何分後のup,downを予測するか
 
 
 #train= make_training_data(EUF["close"].iloc[int(len(EUF)/1.1):], mlater, 0.0005, -0.0005)
-train= make_training_data(EUF["close"].iloc[::-1].reset_index(drop=True), mlater, 0.0013, -0.0013) #順番とindexには気をつける
+train= make_training_data(EUF["close"].iloc[::-1].reset_index(drop=True), mlater, 0.0009, -0.0009) #順番とindexには気をつける
 train.columns = ["train"]
 #print(train)
 
@@ -224,8 +224,12 @@ params = {
 model_lgb = lgb.train(params=params,train_set=lgb_train,verbose_eval=10,valid_sets=lgb_eval)
 
 y_pred = model_lgb.predict(x_test,num_iteration=model_lgb.best_iteration)
+y_pred = np.argmax(y_pred, axis=1)
 print(y_pred)
+#print(t_test)
 
+acc = sum(t_test == y_pred) / len(t_test)
+print("acc: ",acc)
 
 
 
