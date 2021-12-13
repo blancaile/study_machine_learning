@@ -14,7 +14,8 @@ import matplotlib.pyplot as plt
 from sklearn.model_selection import train_test_split
 from keras.callbacks import EarlyStopping
 import sys
-import lightgbm as lgb
+#import lightgbm as lgb
+import optuna.integration.lightgbm as lgb #optuna
 from sklearn.metrics import accuracy_score
 import datetime
 
@@ -30,13 +31,24 @@ def make_feature(df):
     #print(df.head())
     
     df["rsi9"] = ta.RSI(df["close"], timeperiod=9)
+
+    df["ma10"] = ta.MA(df["close"], timeperiod=10)
     df["ma35"] = ta.MA(df["close"], timeperiod=35)
-    df["wma5"] = ta.WMA(df["close"], timeperiod=5)
-    df["wma20"] = ta.WMA(df["close"], timeperiod=20) 
+
+    df["ema5"] = ta.EMA(df["close"], timeperiod=5)
+    df["ema8"] = ta.EMA(df["close"], timeperiod=8)
+    df["ema13"] = ta.EMA(df["close"], timeperiod=13)
+    df["ema200"] = ta.EMA(df["close"], timeperiod=200)
+
+    df["wma10"] = ta.WMA(df["close"], timeperiod=10)
+    df["wma20"] = ta.WMA(df["close"], timeperiod=20)
+    df["wma100"] = ta.WMA(df["close"], timeperiod=100)
+
     df["upperband"], df["middleband"], df["lowerband"] = ta.BBANDS(df["close"], timeperiod=20)
     df["sar"] = ta.SAR(df["high"], df["low"], acceleration=0.02, maximum=0.2)
     df["adosc"] = ta.ADOSC(df["high"], df["low"], df["close"], df["Volume ETH"], fastperiod=3, slowperiod=10)
-    df["trix"] = ta.TRIX(df["close"], timeperiod=10)
+    df["trix"] = ta.TRIX(df["close"], timeperiod=20)
+
     #df["upperband"], df["middlebabd"]
     #return df.dropna(how="any") #後でnanの個数を使う
     #print(df)
@@ -74,8 +86,9 @@ def make_training_data(ed, x = 1, up = 0.0001, down = -0.0001):
 
 
 #window_sizeまでのラグ特徴量を生成
-def make_stride(x,window_size):
+def make_lag_feature(x,window_size):
     #name = x.columns.tolist()
+    print("window_size: ",window_size)
     y = pd.DataFrame(x)
     for i in range(window_size):
         y = pd.concat(
@@ -83,7 +96,7 @@ def make_stride(x,window_size):
             axis=1
         )
     #print(y.head())
-        print("\r"+str(i)+" / "+str(window_size), end="")
+        print("\r"+str(i+1)+" / "+str(window_size), end="")
         
     print("")
     return y
@@ -117,14 +130,16 @@ def modelplot(history):
 
 
 #ファイルの読み込み
-#BUF = pd.read_csv(os.getcwd() + r"\cryptocurrency_bot\datasets\edit_btcusdt_f.csv")
+#BUF = pd.read_csv(os.getcwd() + r"\cryptocurrency_bot\datasets\btcusdt_f.csv")
 EUF = pd.read_csv(os.getcwd() + r"\cryptocurrency_bot\datasets\ethusdt_f.csv")
 
 
 #説明変数を生成
 #BUF_feature = make_feature(BUF.iloc[int(len(BUF)/1.1):, :]) #データが入りきらないとき
 #EUF_feature = make_feature(EUF.iloc[int(len(EUF)/3):, :])
-EUF_feature = make_feature(EUF) #本当ならすべてのデータを取り込みたい
+#BUF_feature = make_feature(BUF)
+#EUF_feature = make_feature(EUF)
+feature = make_feature(EUF) #本当ならすべてのデータを取り込みたい
 
 #目的変数を生成
 mlater = 5 #何分後のup,downを予測するか
@@ -134,13 +149,13 @@ mlater = 5 #何分後のup,downを予測するか
 train= make_training_data(EUF["close"].iloc[::-1].reset_index(drop=True), mlater, 0.0009, -0.0009) #順番とindexには気をつける
 train.columns = ["train"]
 #print(train)
-
+del(EUF)
 #train = train.iloc[int(len(EUF)/3):]   #データが入りきらないとき
 train2 = train.to_numpy()
 u, counts = np.unique(train2, return_counts=True) #同じ出現率がよい
 print(u)      #0,     1,    2
 print(counts) #[164008 169315 165253]
-
+del(train2)
 #lightgbmはいらない
 #one hot encoding
 #train = to_categorical(train)
@@ -150,10 +165,10 @@ print(counts) #[164008 169315 165253]
 
 #説明変数の結合
 #feature = pd.concat([BUF_feature, EUF_feature], axis=1)
-feature = pd.DataFrame(EUF_feature)
+#feature = pd.DataFrame(EUF_feature)
 nancount = len(feature[feature.isnull().any(axis=1)])
 
-print(nancount)
+#print(nancount)
 #feature = feature.dropna(how="any").to_numpy()
  
 #feature = feature.dropna(how="any") #///
@@ -171,7 +186,7 @@ print(nancount)
 
 
 #ウィンドウ作成
-window_size = 3
+window_size = 60
 
 
 #slide_feature = strided_axis0(feature, window_size)
@@ -194,15 +209,16 @@ concat_feature_train.reset_index(drop=True, inplace=True)
 
 
 #ラグ特徴量を生成
-x = make_stride(concat_feature_train, window_size=window_size)
+x = make_lag_feature(concat_feature_train, window_size)
 
-#print("feature shape is ", x.shape)
+print("feature shape is ", x.shape)
 #sys.exit()
 
 
 
 
 x_train, x_test, t_train, t_test = train_test_split(x.drop("train", axis=1), x["train"], test_size=0.1, random_state=0, shuffle=False)
+del(x)
 x_train, x_eval, t_train, t_eval = train_test_split(x_train, t_train, test_size=0.1, random_state=0, shuffle=False)
 
 lgb_train = lgb.Dataset(x_train, t_train)
@@ -214,14 +230,20 @@ params = {
     "extra_trees": True,
     "objective": "multiclass",
     "num_class": 3,
-    "metric": "multi_error",
+    "metric": "multi_logloss",
     "device": "gpu",
     "bagging_freq": 1,
-    "bagging_fraction": 0.9
+    "bagging_fraction": 0.9,
+    #"max_depth":10
 }
 
-#ValueError: Input numpy.ndarray must be 2 dimensional
-model_lgb = lgb.train(params=params,train_set=lgb_train,verbose_eval=10,valid_sets=lgb_eval)
+best_params, tuning_history = dict(), list()
+model_lgb = lgb.train(params=params,train_set=lgb_train,verbose_eval=10,valid_sets=lgb_eval
+, num_boost_round=100
+)
+
+print("Best Params:", model_lgb.params)
+#print("Tuning history:", tuning_history)
 
 y_pred = model_lgb.predict(x_test,num_iteration=model_lgb.best_iteration)
 y_pred = np.argmax(y_pred, axis=1)
@@ -229,7 +251,10 @@ print(y_pred)
 #print(t_test)
 
 acc = sum(t_test == y_pred) / len(t_test)
+print(len(t_test))
 print("acc: ",acc)
+#acc:  0.665033393670807 120
+#acc:  0.6653454840521815 2
 
 
 
