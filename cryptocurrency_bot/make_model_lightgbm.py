@@ -14,14 +14,14 @@ import matplotlib.pyplot as plt
 from sklearn.model_selection import train_test_split
 from keras.callbacks import EarlyStopping
 import sys
-#import lightgbm as lgb
-import optuna.integration.lightgbm as lgb #optuna
+import lightgbm as lgb
+#import optuna.integration.lightgbm as lgb #optuna
 from sklearn.metrics import accuracy_score
 import datetime
 
 
 #受け取ったデータから特徴量を生成
-def make_feature(df):
+def make_feature(df, COIN):
     df = df.iloc[::-1] #反転
     df["datetime"] = pd.to_datetime(df["date"])
     df["minute"] = df["datetime"].dt.minute
@@ -42,11 +42,11 @@ def make_feature(df):
 
     df["wma10"] = ta.WMA(df["close"], timeperiod=10)
     df["wma20"] = ta.WMA(df["close"], timeperiod=20)
-    df["wma100"] = ta.WMA(df["close"], timeperiod=100)
+    df["wma150"] = ta.WMA(df["close"], timeperiod=150)
 
     df["upperband"], df["middleband"], df["lowerband"] = ta.BBANDS(df["close"], timeperiod=20)
     df["sar"] = ta.SAR(df["high"], df["low"], acceleration=0.02, maximum=0.2)
-    df["adosc"] = ta.ADOSC(df["high"], df["low"], df["close"], df["Volume ETH"], fastperiod=3, slowperiod=10)
+    df["adosc"] = ta.ADOSC(df["high"], df["low"], df["close"], df["Volume "+COIN], fastperiod=3, slowperiod=10)
     df["trix"] = ta.TRIX(df["close"], timeperiod=20)
 
     #df["upperband"], df["middlebabd"]
@@ -54,7 +54,7 @@ def make_feature(df):
     #print(df)
     #return df.drop(["open", "high", "low", "close", "tradecount"], axis=1)
     #sys.exit()
-    return df.reset_index(drop=True)
+    return df.add_suffix("_"+COIN).reset_index(drop=True)
 
 
 
@@ -130,16 +130,18 @@ def modelplot(history):
 
 
 #ファイルの読み込み
-#BUF = pd.read_csv(os.getcwd() + r"\cryptocurrency_bot\datasets\btcusdt_f.csv")
+BUF = pd.read_csv(os.getcwd() + r"\cryptocurrency_bot\datasets\btcusdt_f.csv")
 EUF = pd.read_csv(os.getcwd() + r"\cryptocurrency_bot\datasets\ethusdt_f.csv")
 
 
 #説明変数を生成
 #BUF_feature = make_feature(BUF.iloc[int(len(BUF)/1.1):, :]) #データが入りきらないとき
 #EUF_feature = make_feature(EUF.iloc[int(len(EUF)/3):, :])
-#BUF_feature = make_feature(BUF)
-#EUF_feature = make_feature(EUF)
-feature = make_feature(EUF) #本当ならすべてのデータを取り込みたい
+BUF_feature = make_feature(BUF.iloc[:int(len(BUF)/1),:],"BTC")
+EUF_feature = make_feature(EUF.iloc[:int(len(EUF)/1),:],"ETH")
+#print("BUF shape is", BUF_feature.shape)
+#print("EUF shape is", EUF_feature.shape)
+#feature = make_feature(EUF,"ETH") #本当ならすべてのデータを取り込みたい
 
 #目的変数を生成
 mlater = 5 #何分後のup,downを予測するか
@@ -150,6 +152,7 @@ train= make_training_data(EUF["close"].iloc[::-1].reset_index(drop=True), mlater
 train.columns = ["train"]
 #print(train)
 del(EUF)
+del(BUF)
 #train = train.iloc[int(len(EUF)/3):]   #データが入りきらないとき
 train2 = train.to_numpy()
 u, counts = np.unique(train2, return_counts=True) #同じ出現率がよい
@@ -164,7 +167,7 @@ del(train2)
 
 
 #説明変数の結合
-#feature = pd.concat([BUF_feature, EUF_feature], axis=1)
+feature = pd.concat([EUF_feature, BUF_feature], axis=1)
 #feature = pd.DataFrame(EUF_feature)
 nancount = len(feature[feature.isnull().any(axis=1)])
 
@@ -186,7 +189,7 @@ nancount = len(feature[feature.isnull().any(axis=1)])
 
 
 #ウィンドウ作成
-window_size = 60
+window_size = 6
 
 
 #slide_feature = strided_axis0(feature, window_size)
@@ -223,6 +226,8 @@ x_train, x_eval, t_train, t_eval = train_test_split(x_train, t_train, test_size=
 
 lgb_train = lgb.Dataset(x_train, t_train)
 lgb_eval = lgb.Dataset(x_eval, t_eval, reference=lgb_train)
+print(x_train.columns)
+#print(t_train.columns)
 
 params = {
     "task": "train",
@@ -234,27 +239,35 @@ params = {
     "device": "gpu",
     "bagging_freq": 1,
     "bagging_fraction": 0.9,
-    #"max_depth":10
+    'feature_pre_filter': False,
+    "lambda_l1": 3.946722917499177e-05,
+    "lambda_l2": 4.6903285635226136e-07,
+    "num_levels": 244,
+    "feature_fraction": 1.0,
+    "min_child_samples": 5,
+    "num_iterations": 50,
 }
 
 best_params, tuning_history = dict(), list()
 model_lgb = lgb.train(params=params,train_set=lgb_train,verbose_eval=10,valid_sets=lgb_eval
 , num_boost_round=100
 )
+#Best Params: {'task': 'train', 'boosting': 'rf', 'extra_trees': True, 'objective': 'multiclass', 'num_class': 3, 
+# 'metric': 'multi_logloss', 'device': 'gpu', 'bagging_freq': 1, 'bagging_fraction': 0.9, 'feature_pre_filter': False, 
+# 'lambda_l1': 3.946722917499177e-05, 'lambda_l2': 4.6903285635226136e-07, 'num_leaves': 244, 'feature_fraction': 1.0,
+#  'min_child_samples': 5, 'num_iterations': 50, 'early_stopping_round': None}
 
-print("Best Params:", model_lgb.params)
+#print("Best Params:", model_lgb.params)
 #print("Tuning history:", tuning_history)
 
 y_pred = model_lgb.predict(x_test,num_iteration=model_lgb.best_iteration)
 y_pred = np.argmax(y_pred, axis=1)
-print(y_pred)
-#print(t_test)
+
 
 acc = sum(t_test == y_pred) / len(t_test)
 print(len(t_test))
 print("acc: ",acc)
-#acc:  0.665033393670807 120
-#acc:  0.6653454840521815 2
+
 
 
 
