@@ -135,20 +135,21 @@ EUF = pd.read_csv(os.getcwd() + r"\cryptocurrency_bot\datasets\ethusdt_f.csv")
 
 
 #説明変数を生成
-#BUF_feature = make_feature(BUF.iloc[int(len(BUF)/1.1):, :]) #データが入りきらないとき
-#EUF_feature = make_feature(EUF.iloc[int(len(EUF)/3):, :])
-BUF_feature = make_feature(BUF.iloc[:int(len(BUF)/1),:],"BTC")
-EUF_feature = make_feature(EUF.iloc[:int(len(EUF)/1),:],"ETH")
+#BUF_feature = make_feature(BUF.iloc[:int(len(BUF)/1), :],"BTC") #データが入りきらないとき
+#EUF_feature = make_feature(EUF.iloc[:int(len(EUF)/1), :],"ETH")
+BUF_feature = make_feature(BUF,"BTC")
+EUF_feature = make_feature(EUF,"ETH")
 #print("BUF shape is", BUF_feature.shape)
 #print("EUF shape is", EUF_feature.shape)
 #feature = make_feature(EUF,"ETH") #本当ならすべてのデータを取り込みたい
 
 #目的変数を生成
-mlater = 5 #何分後のup,downを予測するか
+mlater = 10 #何分後のup,downを予測するか
 
 
 #train= make_training_data(EUF["close"].iloc[int(len(EUF)/1.1):], mlater, 0.0005, -0.0005)
-train= make_training_data(EUF["close"].iloc[::-1].reset_index(drop=True), mlater, 0.0009, -0.0009) #順番とindexには気をつける
+train= make_training_data(EUF["close"].iloc[::-1].reset_index(drop=True), mlater, 0.00125, -0.00125
+) #順番とindexには気をつける
 train.columns = ["train"]
 #print(train)
 del(EUF)
@@ -189,8 +190,13 @@ nancount = len(feature[feature.isnull().any(axis=1)])
 
 
 #ウィンドウ作成
-window_size = 6
-
+window_size = 5
+#10分後予測 size60 acc0.732
+#          size1   acc0.742
+#           size3   acc0.746
+#           size5  acc0.750
+#           size10  acc0.73
+#           size35  acc0.73
 
 #slide_feature = strided_axis0(feature, window_size)
 #print("feature shape is ",feature.shape)
@@ -260,6 +266,8 @@ model_lgb = lgb.train(params=params,train_set=lgb_train,verbose_eval=10,valid_se
 #print("Best Params:", model_lgb.params)
 #print("Tuning history:", tuning_history)
 
+model_lgb.save_model("model.txt") #モデル保存
+
 y_pred = model_lgb.predict(x_test,num_iteration=model_lgb.best_iteration)
 y_pred = np.argmax(y_pred, axis=1)
 
@@ -268,6 +276,14 @@ acc = sum(t_test == y_pred) / len(t_test)
 print(len(t_test))
 print("acc: ",acc)
 
+#保存したモデルの呼び出し
+# best = lgb.Booster(model_file="model.txt")
+# ypred = best.predict(x_test,num_iteration=best.best_iteration)
+# ypred = np.argmax(ypred,axis=1)
+
+# acc = sum(t_test == ypred) / len(t_test)
+# print(len(t_test))
+# print("acc: ",acc)
 
 
 
