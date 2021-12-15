@@ -277,13 +277,55 @@ print(len(t_test))
 print("acc: ",acc)
 
 #保存したモデルの呼び出し
-best = lgb.Booster(model_file=os.getcwd() +r"\cryptocurrency_bot\model.txt")
-ypred = best.predict(x_test,num_iteration=best.best_iteration)
-ypred = np.argmax(ypred,axis=1)
+# best = lgb.Booster(model_file=os.getcwd() +r"\cryptocurrency_bot\model.txt")
+# ypred = best.predict(x_test,num_iteration=best.best_iteration)
+# ypred = np.argmax(ypred,axis=1)
 
-acc = sum(t_test == ypred) / len(t_test)
-print(len(t_test))
-print("acc: ",acc)
+# acc = sum(t_test == ypred) / len(t_test)
+# print(len(t_test))
+# print("acc: ",acc)
+
+
+#ccxtを使用
+#'binanceusdm',
+import ccxt
+
+#key読み込み
+apikey = ""
+secretkey = ""
+with open(os.getcwd() + r"\cryptocurrency_bot\binance_api_key.txt","r") as f:
+    for line in f:
+        data = line.strip().split("=")
+        if data[0] == "api_key":
+            apikey = data[1]
+        elif data[0] == "secret_key":
+            secretkey = data[1]
+f.close()
+
+
+#print(type(key))
+#print(key)
+
+
+#dfdata = key.split("=")
 
 
 
+exchange = ccxt.binanceusdm({
+    "apikey": apikey,
+    "secret": secretkey,
+})
+
+info = exchange.fetch_ticker(symbol="ETH/USDT")
+#print(info)
+
+import time
+import requests
+stamps=int(time.time()-60*60*24)*1000
+url="https://fapi.binance.com/fapi/v1/klines?symbol=ETHUSDT&interval=1m&startTime="+str(stamps)
+res = requests.get(url)
+res=res.json()
+#print(res)
+df = pd.DataFrame(res).drop([6,7,9,10,11],axis=1)
+#df.columns[""]
+print(df.set_axis(["datetime","open","high","low","close","Volume ETH","tradecount"],axis=1))
