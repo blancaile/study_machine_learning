@@ -18,12 +18,16 @@ import lightgbm as lgb
 #import optuna.integration.lightgbm as lgb #optuna
 from sklearn.metrics import accuracy_score
 import datetime
-
+import time
+import requests
+import warnings
+warnings.simplefilter("ignore")
 
 #受け取ったデータから特徴量を生成
 def make_feature(df, COIN):
     df = df.iloc[::-1] #反転
     df["datetime"] = pd.to_datetime(df["date"])
+    #print(df.head())
     df["minute"] = df["datetime"].dt.minute
     df["hour"] = df["datetime"].dt.hour
     df["dayofweek"] = df["datetime"].dt.dayofweek
@@ -129,6 +133,28 @@ def modelplot(history):
     plt.show()
 
 
+
+#binance apiからcoin futuresの１日前からのklinesを持ってくる
+def getklinedata(coin,day):
+    sstamps=int(time.time()-day)*1000
+    #estamps=int(time.time())*1000
+
+    url="https://fapi.binance.com/fapi/v1/klines?symbol="+ coin + "USDT&interval=1m&startTime="+str(sstamps)#+"&endTime="+str(estamps)
+    res = requests.get(url)
+    res=res.json()
+    #print(res)
+    df = pd.DataFrame(res).drop([6,7,9,10,11],axis=1)
+    df = df.set_axis(["date","open","high","low","close","Volume "+coin,"tradecount"],axis=1).astype(float)
+    df["date"] = pd.to_datetime(df["date"],unit="ms")
+
+
+    df["unix"] = df["date"]
+    df["symbol"] = df["date"]
+    df["Volume USDT"] = df["date"]
+
+    return df
+
+
 #ファイルの読み込み
 BUF = pd.read_csv(os.getcwd() + r"\cryptocurrency_bot\datasets\btcusdt_f.csv")
 EUF = pd.read_csv(os.getcwd() + r"\cryptocurrency_bot\datasets\ethusdt_f.csv")
@@ -148,8 +174,8 @@ mlater = 10 #何分後のup,downを予測するか
 
 
 #train= make_training_data(EUF["close"].iloc[int(len(EUF)/1.1):], mlater, 0.0005, -0.0005)
-train= make_training_data(EUF["close"].iloc[::-1].reset_index(drop=True), mlater, 0.00125, -0.00125
-) #順番とindexには気をつける
+threshold = 0.00125 #閾値 #10
+train= make_training_data(EUF["close"].iloc[::-1].reset_index(drop=True), mlater, threshold, -1 * threshold) #順番とindexには気をつける
 train.columns = ["train"]
 #print(train)
 del(EUF)
@@ -218,8 +244,10 @@ concat_feature_train.reset_index(drop=True, inplace=True)
 
 
 #ラグ特徴量を生成
-x = make_lag_feature(concat_feature_train, window_size)
-
+x = make_lag_feature(concat_feature_train, window_size) #NaNどうしてる？
+#print(x)
+x = x.dropna(how="any",inplace=False).reset_index(drop=True)
+#print(x)
 print("feature shape is ", x.shape)
 #sys.exit()
 
@@ -232,7 +260,7 @@ x_train, x_eval, t_train, t_eval = train_test_split(x_train, t_train, test_size=
 
 lgb_train = lgb.Dataset(x_train, t_train)
 lgb_eval = lgb.Dataset(x_eval, t_eval, reference=lgb_train)
-print(x_train.columns)
+#print(x_train.columns)
 #print(t_train.columns)
 
 params = {
@@ -287,45 +315,68 @@ print("acc: ",acc)
 
 
 #ccxtを使用
-#'binanceusdm',
-import ccxt
+#import ccxt
 
 #key読み込み
-apikey = ""
-secretkey = ""
-with open(os.getcwd() + r"\cryptocurrency_bot\binance_api_key.txt","r") as f:
-    for line in f:
-        data = line.strip().split("=")
-        if data[0] == "api_key":
-            apikey = data[1]
-        elif data[0] == "secret_key":
-            secretkey = data[1]
-f.close()
-
-
-#print(type(key))
-#print(key)
-
-
-#dfdata = key.split("=")
+# apikey = ""
+# secretkey = ""
+# with open(os.getcwd() + r"\cryptocurrency_bot\binance_api_key.txt","r") as f:
+#     for line in f:
+#         data = line.strip().split("=")
+#         if data[0] == "api_key":
+#             apikey = data[1]
+#         elif data[0] == "secret_key":
+#             secretkey = data[1]
+# f.close()
 
 
 
-exchange = ccxt.binanceusdm({
-    "apikey": apikey,
-    "secret": secretkey,
-})
 
-info = exchange.fetch_ticker(symbol="ETH/USDT")
+
+# exchange = ccxt.binanceusdm({
+#     "apikey": apikey,
+#     "secret": secretkey,
+# })
+
+# info = exchange.fetch_ticker(symbol="ETH/USDT")
 #print(info)
 
-import time
-import requests
-stamps=int(time.time()-60*60*24)*1000
-url="https://fapi.binance.com/fapi/v1/klines?symbol=ETHUSDT&interval=1m&startTime="+str(stamps)
-res = requests.get(url)
-res=res.json()
-#print(res)
-df = pd.DataFrame(res).drop([6,7,9,10,11],axis=1)
-#df.columns[""]
-print(df.set_axis(["datetime","open","high","low","close","Volume ETH","tradecount"],axis=1))
+
+
+#今から一日前のデータでテスト
+
+day = 60*60*24 #1日前までのチャートを取得
+noweth = getklinedata("ETH",day)
+
+time.sleep(1)
+nowbtc = getklinedata("BTC",day)
+#print("noweth shape is ",noweth.shape)
+
+NBUF_feature = make_feature(nowbtc.iloc[::-1],"BTC")
+NEUF_feature = make_feature(noweth.iloc[::-1],"ETH")
+#print("nEUFF shape is ",NEUF_feature.shape)
+
+nowtrain= make_training_data(noweth["close"].reset_index(drop=True), mlater, threshold, -1 * threshold)
+nowtrain.columns = ["train"]
+#print("nowtrain shape is ",nowtrain.shape)
+
+nowfeature = pd.concat([NEUF_feature, NBUF_feature], axis=1)
+nowconcat_feature_train = pd.concat([nowtrain, nowfeature], axis=1)
+#print("nowconcat shape is ",nowconcat_feature_train.shape)
+
+nowconcat_feature_train.dropna(how="any", inplace=True)
+nowconcat_feature_train.reset_index(drop=True, inplace=True)
+x2 = make_lag_feature(nowconcat_feature_train, window_size)
+#print("x2 shape is ",x2.shape)
+x2 = x2.dropna(how="any").reset_index(drop=True) #これ怪しい
+x_now = x2.drop("train", axis=1)
+#print("xnow is \n",x_now)
+t_now = x2["train"]
+#print("t_now is \n",t_now)
+best = lgb.Booster(model_file=os.getcwd() +r"\cryptocurrency_bot\model.txt")
+ypred = best.predict(x_now,num_iteration=best.best_iteration)
+ypred = np.argmax(ypred,axis=1)
+
+acc = sum(t_now == ypred) / len(t_now)
+print(len(t_now))
+print("acc: ",acc)
