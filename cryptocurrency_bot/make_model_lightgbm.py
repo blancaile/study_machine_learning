@@ -266,7 +266,7 @@ model_lgb = lgb.train(params=params,train_set=lgb_train,verbose_eval=10,valid_se
 #print("Best Params:", model_lgb.params)
 #print("Tuning history:", tuning_history)
 
-model_lgb.save_model("model.txt") #モデル保存
+model_lgb.save_model(os.getcwd() +r"\cryptocurrency_bot\model.txt") #モデル保存
 
 y_pred = model_lgb.predict(x_test,num_iteration=model_lgb.best_iteration)
 y_pred = np.argmax(y_pred, axis=1)
@@ -277,13 +277,13 @@ print(len(t_test))
 print("acc: ",acc)
 
 #保存したモデルの呼び出し
-# best = lgb.Booster(model_file="model.txt")
-# ypred = best.predict(x_test,num_iteration=best.best_iteration)
-# ypred = np.argmax(ypred,axis=1)
+best = lgb.Booster(model_file=os.getcwd() +r"\cryptocurrency_bot\model.txt")
+ypred = best.predict(x_test,num_iteration=best.best_iteration)
+ypred = np.argmax(ypred,axis=1)
 
-# acc = sum(t_test == ypred) / len(t_test)
-# print(len(t_test))
-# print("acc: ",acc)
+acc = sum(t_test == ypred) / len(t_test)
+print(len(t_test))
+print("acc: ",acc)
 
 
 
