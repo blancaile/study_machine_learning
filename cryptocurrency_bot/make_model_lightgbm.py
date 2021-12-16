@@ -26,38 +26,50 @@ warnings.simplefilter("ignore")
 
 #受け取ったデータから特徴量を生成
 def make_feature(df, COIN):
+    #考察
+    #Overlap Studiesよりもモメンタムインジケーターの方が重要度が高い
+    #ラグ特徴量はtrainが役に立っている,テクニカル指標のラグ特徴量はあまり役に立っていない   
+
     df = df.iloc[::-1] #反転
     df["datetime"] = pd.to_datetime(df["date"])
     #print(df.head())
-    df["minute"] = df["datetime"].dt.minute
-    df["hour"] = df["datetime"].dt.hour
-    df["dayofweek"] = df["datetime"].dt.dayofweek
+    #df["minute"] = df["datetime"].dt.minute
+    #df["hour"] = df["datetime"].dt.hour
+    #df["dayofweek"] = df["datetime"].dt.dayofweek
     df.drop(["date","datetime","unix", "symbol", "Volume USDT"], axis=1, inplace=True)
     #print(df.head())
 
     f = [5,8,13,21,34,55,89,144]#,233
     for i in f:
-        df["rsi"+str(i)] = ta.RSI(df["close"], timeperiod=i)
-        df["ma"+str(i)] = ta.MA(df["close"], timeperiod=i)
-        df["dema"+str(i)] = ta.DEMA(df["close"], timeperiod=i)
-        df["sma"+str(i)] = ta.SMA(df["close"], timeperiod=i)
-        df["ema"+str(i)] = ta.EMA(df["close"], timeperiod=i)
-        df["wma"+str(i)] = ta.WMA(df["close"], timeperiod=i)
-        df["kama"+str(i)] = ta.KAMA(df["close"], timeperiod=i)
-        df["tema"+str(i)] = ta.TEMA(df["close"], timeperiod=i)
-        df["trima"+str(i)] = ta.TRIMA(df["close"], timeperiod=i)
-        df["upperband"+str(i)], df["middleband"+str(i)], df["lowerband"+str(i)] = ta.BBANDS(df["close"], timeperiod=i)
-        df["trix"+str(i)] = ta.TRIX(df["close"], timeperiod=i)
-        df["tsf"+str(i)] = ta.TSF(df["close"], timeperiod=i)
-        df["adxr"+str(i)] = ta.ADXR(df["high"], df["low"], df["close"], timeperiod=i)
-        df["natr"+str(i)] = ta.NATR(df["high"], df["low"], df["close"], timeperiod=i)
+        df["rsi"+str(i)] = ta.RSI(df["close"], timeperiod=i)#重要
+        #df["ma"+str(i)] = ta.MA(df["close"], timeperiod=i)
+        #df["dema"+str(i)] = ta.DEMA(df["close"], timeperiod=i)
+        #df["sma"+str(i)] = ta.SMA(df["close"], timeperiod=i)
+        #df["ema"+str(i)] = ta.EMA(df["close"], timeperiod=i)
+        #df["wma"+str(i)] = ta.WMA(df["close"], timeperiod=i)
+        #df["kama"+str(i)] = ta.KAMA(df["close"], timeperiod=i)
+        #df["tema"+str(i)] = ta.TEMA(df["close"], timeperiod=i)
+        #df["trima"+str(i)] = ta.TRIMA(df["close"], timeperiod=i)
+        #df["upperband"+str(i)], df["middleband"+str(i)], df["lowerband"+str(i)] = ta.BBANDS(df["close"], timeperiod=i)
+        #df["trix"+str(i)] = ta.TRIX(df["close"], timeperiod=i)
+        #df["tsf"+str(i)] = ta.TSF(df["close"], timeperiod=i)
+        #df["adxr"+str(i)] = ta.ADXR(df["high"], df["low"], df["close"], timeperiod=i)
+        df["natr"+str(i)] = ta.NATR(df["high"], df["low"], df["close"], timeperiod=i)#重要
+        df["cci"+str(i)] = ta.CCI(df["high"],df["low"],df["close"],timeperiod=i)#重要
+        #df["aroonosc"+str(i)] = ta.AROONOSC(df["high"],df["low"],timeperiod=i)
+        df["cmo"+str(i)] = ta.CMO(df["close"],timeperiod=i)#重要
+        #df["dx"+str(i)] = ta.DX(df["high"],df["low"],df["close"],timeperiod=i)
+        df["mfi"+str(i)] = ta.MFI(df["high"],df["low"],df["close"],df["Volume "+COIN],timeperiod=i)
+        df["mom"+str(i)] = ta.MOM(df["close"],timeperiod=i)#すこし重要?
 
-    df["sar"] = ta.SAR(df["high"], df["low"], acceleration=0.02, maximum=0.2)
+    #df["sar"] = ta.SAR(df["high"], df["low"], acceleration=0.02, maximum=0.2)
     df["adosc"] = ta.ADOSC(df["high"], df["low"], df["close"], df["Volume "+COIN], fastperiod=3, slowperiod=10)
-    df["obv"] = ta.OBV(df["close"],df["Volume "+COIN])
-    df["ht_trendline"] = ta.HT_TRENDLINE(df["close"])
+    df["obv"] = ta.OBV(df["close"],df["Volume "+COIN])#すこし重要?
+    #df["ht_trendline"] = ta.HT_TRENDLINE(df["close"])
     df["macd"], df["macdsignal"], df["macdhist"] = ta.MACD(df["close"], fastperiod=12, slowperiod=26, signalperiod=9)
-    df["bop"] = ta.BOP(df["open"],df["high"],df["low"],df["close"])
+    df["bop"] = ta.BOP(df["open"],df["high"],df["low"],df["close"]) #重要度１位
+    
+    
 
 
 
@@ -96,6 +108,7 @@ def make_feature(df, COIN):
     #print(df)
     #return df.drop(["open", "high", "low", "close", "tradecount"], axis=1)
     #sys.exit()
+    df.drop(["close","open","high","low"], axis=1, inplace=True)
     return df.add_suffix("_"+COIN).reset_index(drop=True)
 
 
@@ -254,7 +267,7 @@ nancount = len(feature[feature.isnull().any(axis=1)])
 
 
 #ウィンドウ作成
-window_size = 5
+window_size = 5 #ラグ特徴量はあったほうがいい0.5->0.75
 #10分後予測 size60 acc0.732
 #          size1   acc0.742
 #           size3   acc0.746
@@ -345,6 +358,10 @@ acc = sum(t_test == y_pred) / len(t_test)
 print(len(t_test))
 print("acc: ",acc)
 
+
+lgb.plot_importance(model_lgb, figsize=(12, 6))
+plt.show()
+
 #保存したモデルの呼び出し
 # best = lgb.Booster(model_file=os.getcwd() +r"\cryptocurrency_bot\model.txt")
 # ypred = best.predict(x_test,num_iteration=best.best_iteration)
@@ -386,29 +403,29 @@ print("acc: ",acc)
 
 #今から一日前のデータでテスト
 
-day = 60*60*24 #1日前までのチャートを取得
+day = 60*60*24*2 #1日前までのチャートを取得
 noweth = getklinedata("ETH",day)
 
 time.sleep(1)
 nowbtc = getklinedata("BTC",day)
-#print("noweth shape is ",noweth.shape)
+print("noweth shape is ",noweth.shape)
 
 NBUF_feature = make_feature(nowbtc.iloc[::-1],"BTC")
 NEUF_feature = make_feature(noweth.iloc[::-1],"ETH")
-#print("nEUFF shape is ",NEUF_feature.shape)
+print("nEUFF shape is ",NEUF_feature.shape)
 
 nowtrain= make_training_data(noweth["close"].reset_index(drop=True), mlater, threshold, -1 * threshold)
 nowtrain.columns = ["train"]
-#print("nowtrain shape is ",nowtrain.shape)
+print("nowtrain shape is ",nowtrain.shape)
 
 nowfeature = pd.concat([NEUF_feature, NBUF_feature], axis=1)
 nowconcat_feature_train = pd.concat([nowtrain, nowfeature], axis=1)
-#print("nowconcat shape is ",nowconcat_feature_train.shape)
+print("nowconcat shape is ",nowconcat_feature_train.shape)
 
 nowconcat_feature_train.dropna(how="any", inplace=True)
 nowconcat_feature_train.reset_index(drop=True, inplace=True)
 x2 = make_lag_feature(nowconcat_feature_train, window_size)
-#print("x2 shape is ",x2.shape)
+print("x2 shape is ",x2.shape)
 x2 = x2.dropna(how="any").reset_index(drop=True) #これ怪しい
 x_now = x2.drop("train", axis=1)
 #print("xnow is \n",x_now)
