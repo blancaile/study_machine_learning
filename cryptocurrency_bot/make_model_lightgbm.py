@@ -23,6 +23,7 @@ import requests
 import warnings
 warnings.simplefilter("ignore")
 
+
 #受け取ったデータから特徴量を生成
 def make_feature(df, COIN):
     df = df.iloc[::-1] #反転
@@ -33,25 +34,62 @@ def make_feature(df, COIN):
     df["dayofweek"] = df["datetime"].dt.dayofweek
     df.drop(["date","datetime","unix", "symbol", "Volume USDT"], axis=1, inplace=True)
     #print(df.head())
-    
-    df["rsi9"] = ta.RSI(df["close"], timeperiod=9)
 
-    df["ma10"] = ta.MA(df["close"], timeperiod=10)
-    df["ma35"] = ta.MA(df["close"], timeperiod=35)
+    f = [5,8,13,21,34,55,89,144]#,233
+    for i in f:
+        df["rsi"+str(i)] = ta.RSI(df["close"], timeperiod=i)
+        df["ma"+str(i)] = ta.MA(df["close"], timeperiod=i)
+        df["dema"+str(i)] = ta.DEMA(df["close"], timeperiod=i)
+        df["sma"+str(i)] = ta.SMA(df["close"], timeperiod=i)
+        df["ema"+str(i)] = ta.EMA(df["close"], timeperiod=i)
+        df["wma"+str(i)] = ta.WMA(df["close"], timeperiod=i)
+        df["kama"+str(i)] = ta.KAMA(df["close"], timeperiod=i)
+        df["tema"+str(i)] = ta.TEMA(df["close"], timeperiod=i)
+        df["trima"+str(i)] = ta.TRIMA(df["close"], timeperiod=i)
+        df["upperband"+str(i)], df["middleband"+str(i)], df["lowerband"+str(i)] = ta.BBANDS(df["close"], timeperiod=i)
+        df["trix"+str(i)] = ta.TRIX(df["close"], timeperiod=i)
+        df["tsf"+str(i)] = ta.TSF(df["close"], timeperiod=i)
+        df["adxr"+str(i)] = ta.ADXR(df["high"], df["low"], df["close"], timeperiod=i)
+        df["natr"+str(i)] = ta.NATR(df["high"], df["low"], df["close"], timeperiod=i)
 
-    df["ema5"] = ta.EMA(df["close"], timeperiod=5)
-    df["ema8"] = ta.EMA(df["close"], timeperiod=8)
-    df["ema13"] = ta.EMA(df["close"], timeperiod=13)
-    df["ema200"] = ta.EMA(df["close"], timeperiod=200)
-
-    df["wma10"] = ta.WMA(df["close"], timeperiod=10)
-    df["wma20"] = ta.WMA(df["close"], timeperiod=20)
-    df["wma150"] = ta.WMA(df["close"], timeperiod=150)
-
-    df["upperband"], df["middleband"], df["lowerband"] = ta.BBANDS(df["close"], timeperiod=20)
     df["sar"] = ta.SAR(df["high"], df["low"], acceleration=0.02, maximum=0.2)
     df["adosc"] = ta.ADOSC(df["high"], df["low"], df["close"], df["Volume "+COIN], fastperiod=3, slowperiod=10)
-    df["trix"] = ta.TRIX(df["close"], timeperiod=20)
+    df["obv"] = ta.OBV(df["close"],df["Volume "+COIN])
+    df["ht_trendline"] = ta.HT_TRENDLINE(df["close"])
+    df["macd"], df["macdsignal"], df["macdhist"] = ta.MACD(df["close"], fastperiod=12, slowperiod=26, signalperiod=9)
+    df["bop"] = ta.BOP(df["open"],df["high"],df["low"],df["close"])
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+    # df["rsi9"] = ta.RSI(df["close"], timeperiod=9)
+
+    # df["ma10"] = ta.MA(df["close"], timeperiod=10)
+    # df["ma35"] = ta.MA(df["close"], timeperiod=35)
+
+    # df["ema5"] = ta.EMA(df["close"], timeperiod=5)
+    # df["ema8"] = ta.EMA(df["close"], timeperiod=8)
+    # df["ema13"] = ta.EMA(df["close"], timeperiod=13)
+    # df["ema200"] = ta.EMA(df["close"], timeperiod=200)
+
+    # df["wma10"] = ta.WMA(df["close"], timeperiod=10)
+    # df["wma20"] = ta.WMA(df["close"], timeperiod=20)
+    # df["wma150"] = ta.WMA(df["close"], timeperiod=150)
+
+    # df["upperband"], df["middleband"], df["lowerband"] = ta.BBANDS(df["close"], timeperiod=20)
+    # df["sar"] = ta.SAR(df["high"], df["low"], acceleration=0.02, maximum=0.2)
+    # df["adosc"] = ta.ADOSC(df["high"], df["low"], df["close"], df["Volume "+COIN], fastperiod=3, slowperiod=10)
+    # df["trix"] = ta.TRIX(df["close"], timeperiod=20)
 
     #df["upperband"], df["middlebabd"]
     #return df.dropna(how="any") #後でnanの個数を使う
@@ -257,6 +295,11 @@ print("feature shape is ", x.shape)
 x_train, x_test, t_train, t_test = train_test_split(x.drop("train", axis=1), x["train"], test_size=0.1, random_state=0, shuffle=False)
 del(x)
 x_train, x_eval, t_train, t_eval = train_test_split(x_train, t_train, test_size=0.1, random_state=0, shuffle=False)
+t_train_np = t_train.to_numpy()
+u, counts = np.unique(t_train_np, return_counts=True) #同じ出現率がよい
+print(u)      #0,     1,    2
+print(counts) #[164008 169315 165253]
+
 
 lgb_train = lgb.Dataset(x_train, t_train)
 lgb_eval = lgb.Dataset(x_eval, t_eval, reference=lgb_train)
@@ -283,9 +326,7 @@ params = {
 }
 
 best_params, tuning_history = dict(), list()
-model_lgb = lgb.train(params=params,train_set=lgb_train,verbose_eval=10,valid_sets=lgb_eval
-, num_boost_round=100
-)
+model_lgb = lgb.train(params=params,train_set=lgb_train,verbose_eval=10,valid_sets=lgb_eval,num_boost_round=1000)
 #Best Params: {'task': 'train', 'boosting': 'rf', 'extra_trees': True, 'objective': 'multiclass', 'num_class': 3, 
 # 'metric': 'multi_logloss', 'device': 'gpu', 'bagging_freq': 1, 'bagging_fraction': 0.9, 'feature_pre_filter': False, 
 # 'lambda_l1': 3.946722917499177e-05, 'lambda_l2': 4.6903285635226136e-07, 'num_leaves': 244, 'feature_fraction': 1.0,
