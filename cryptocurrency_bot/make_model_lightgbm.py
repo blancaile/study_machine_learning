@@ -40,71 +40,78 @@ def make_feature(df, COIN):
     df.drop(["date","datetime","unix", "symbol", "Volume USDT"], axis=1, inplace=True)
     #print(df.head())
 
-    f = [5,8,13,21,34,55,89,144]#,233,377
+    f = [55,89]#,144,233,377
+    l = [21,34,55]#,233,377
+    h = [5,8,13,21,34,55,89]
+    for i in h:
+    #     df["rsi"+str(i)] = ta.RSI(df["close"], timeperiod=i)#重要
+        
+    #     df["ma"+str(i)] = ta.MA(df["close"], timeperiod=i)
+    #     #df["dema"+str(i)] = ta.DEMA(df["close"], timeperiod=i)
+        df["sma"+str(i)] = ta.SMA(df["close"], timeperiod=i)
+        df["maer"+str(i)] = (df["close"] - df["sma"+str(i)])*100/df["sma"+str(i)] #移動平均乖離率
+        df.drop(["sma"+str(i)], axis=1, inplace=True)
+    #     #df["ema"+str(i)] = ta.EMA(df["close"], timeperiod=i)
+    #     #df["wma"+str(i)] = ta.WMA(df["close"], timeperiod=i)
+    #     #df["kama"+str(i)] = ta.KAMA(df["close"], timeperiod=i)
+    #     #df["tema"+str(i)] = ta.TEMA(df["close"], timeperiod=i)
+    #     #df["trima"+str(i)] = ta.TRIMA(df["close"], timeperiod=i)
+    #     #df["upperband"+str(i)], df["middleband"+str(i)], df["lowerband"+str(i)] = ta.BBANDS(df["close"], timeperiod=i)
+    #     df["trix"+str(i)] = ta.TRIX(df["close"], timeperiod=i)
+    #     #df["tsf"+str(i)] = ta.TSF(df["close"], timeperiod=i)
+    #     #df["adxr"+str(i)] = ta.ADXR(df["high"], df["low"], df["close"], timeperiod=i)
+    #     df["natr"+str(i)] = ta.NATR(df["high"], df["low"], df["close"], timeperiod=i)#重要
+    #     df["cci"+str(i)] = ta.CCI(df["high"],df["low"],df["close"],timeperiod=i)#重要
+    #     df["aroondown"+str(i)], df["aroonup"+str(i)] = ta.AROON(df["high"],df["low"],timeperiod=i)
+    #     df["cmo"+str(i)] = ta.CMO(df["close"],timeperiod=i)#重要
+    #     #df["dx"+str(i)] = ta.DX(df["high"],df["low"],df["close"],timeperiod=i)
+    #     df["mfi"+str(i)] = ta.MFI(df["high"],df["low"],df["close"],df["Volume "+COIN],timeperiod=i)
+    #     df["mom"+str(i)] = ta.MOM(df["close"],timeperiod=i)#すこし重要? 21だけ高い
+    #     df["roc"+str(i)] = ta.ROC(df["close"],timeperiod=i)
+        df["willr"+str(i)] = ta.WILLR(df["high"],df["low"],df["close"],timeperiod=i)
+        
     for i in f:
         df["rsi"+str(i)] = ta.RSI(df["close"], timeperiod=i)#重要
         
-        
-        #df["dema"+str(i)] = ta.DEMA(df["close"], timeperiod=i)
-        #df["sma"+str(i)] = ta.SMA(df["close"], timeperiod=i)
-        #df["ema"+str(i)] = ta.EMA(df["close"], timeperiod=i)
-        #df["wma"+str(i)] = ta.WMA(df["close"], timeperiod=i)
-        #df["kama"+str(i)] = ta.KAMA(df["close"], timeperiod=i)
-        #df["tema"+str(i)] = ta.TEMA(df["close"], timeperiod=i)
-        #df["trima"+str(i)] = ta.TRIMA(df["close"], timeperiod=i)
-        #df["upperband"+str(i)], df["middleband"+str(i)], df["lowerband"+str(i)] = ta.BBANDS(df["close"], timeperiod=i)
+        #df["ma"+str(i)] = ta.MA(df["close"], timeperiod=i)
         df["trix"+str(i)] = ta.TRIX(df["close"], timeperiod=i)
-        #df["tsf"+str(i)] = ta.TSF(df["close"], timeperiod=i)
-        #df["adxr"+str(i)] = ta.ADXR(df["high"], df["low"], df["close"], timeperiod=i)
-        df["natr"+str(i)] = ta.NATR(df["high"], df["low"], df["close"], timeperiod=i)#重要
-        df["cci"+str(i)] = ta.CCI(df["high"],df["low"],df["close"],timeperiod=i)#重要
-        #df["aroonosc"+str(i)] = ta.AROONOSC(df["high"],df["low"],timeperiod=i)
         df["cmo"+str(i)] = ta.CMO(df["close"],timeperiod=i)#重要
         #df["dx"+str(i)] = ta.DX(df["high"],df["low"],df["close"],timeperiod=i)
+        #df["mfi"+str(i)] = ta.MFI(df["high"],df["low"],df["close"],df["Volume "+COIN],timeperiod=i)
+        #df["mom"+str(i)] = ta.MOM(df["close"],timeperiod=i)#すこし重要? 21だけ高い
+        #df["roc"+str(i)] = ta.ROC(df["close"],timeperiod=i)
+        #df["willr"+str(i)] = ta.WILLR(df["high"],df["low"],df["close"],timeperiod=i)
+    
+    for i in l:
         df["mfi"+str(i)] = ta.MFI(df["high"],df["low"],df["close"],df["Volume "+COIN],timeperiod=i)
         df["mom"+str(i)] = ta.MOM(df["close"],timeperiod=i)#すこし重要? 21だけ高い
         df["roc"+str(i)] = ta.ROC(df["close"],timeperiod=i)
-        df["willr"+str(i)] = ta.WILLR(df["high"],df["low"],df["close"],timeperiod=i)
-        
+        df["aroondown"+str(i)], df["aroonup"+str(i)] = ta.AROON(df["high"],df["low"],timeperiod=i)
+
+
+
     
 
 
     #df["sar"] = ta.SAR(df["high"], df["low"], acceleration=0.02, maximum=0.2)
     df["adosc"] = ta.ADOSC(df["high"], df["low"], df["close"], df["Volume "+COIN], fastperiod=3, slowperiod=10)
-    df["obv"] = ta.OBV(df["close"],df["Volume "+COIN])#すこし重要?
+    df["obv"] = ta.OBV(df["close"],df["Volume "+COIN])#すこし重要?->重要度１位になった
     #df["ht_trendline"] = ta.HT_TRENDLINE(df["close"])
     df["macd"], df["macdsignal"], df["macdhist"] = ta.MACD(df["close"], fastperiod=12, slowperiod=26, signalperiod=9)
     df["bop"] = ta.BOP(df["open"],df["high"],df["low"],df["close"]) #重要度１位
-    df["trange"] = ta.TRANGE(df["high"],df["low"],df["close"])
-    df["ht_dcperiod"] = ta.HT_DCPERIOD(df["close"])
+    df["trange"] = ta.TRANGE(df["high"],df["low"],df["close"])#重要
+    #df["ht_dcperiod"] = ta.HT_DCPERIOD(df["close"])
     #df["ht_dcphase"] = ta.HT_DCPHASE(df["close"])
-    df["inshape"], df["quadrature"] = ta.HT_PHASOR(df["close"])
+    #df["inshape"], df["quadrature"] = ta.HT_PHASOR(df["close"])
     #df["sine"], df["leadsine"] = ta.HT_SINE(df["close"])
-    df["integer"]= ta.HT_TRENDMODE(df["close"])
+    #df["integer"]= ta.HT_TRENDMODE(df["close"])
+    #df["stochk"], df["stochd"] = ta.STOCHF(df["high"],df["low"],df["close"],fastk_period=5,fastd_period=3,fastd_matype=0)
 
+    #trixはラグ特徴量が優勢
+    #natrはどのtimeperiodも有用
+    #trix,rsi,cmoは144のように大きいと有用
+    #mfi,roc,mom,aroonは21のように小さいと有用
     
-
-
-    #natr233
-    #natr144
-    #tradecount
-    #mfi21
-    #roc21
-    #natr5
-    #Volume
-    #natr8
-    #natr89
-    #obv
-    #natr55
-    #cmo233
-    #natr21
-    #natr13
-    #natr34
-    #mom21
-    #rsi233
-    #rsi144
-    #roc233
-    #cci34
 
 
 
@@ -258,7 +265,7 @@ mlater = 10 #何分後のup,downを予測するか
 
 
 #train= make_training_data(EUF["close"].iloc[int(len(EUF)/1.1):], mlater, 0.0005, -0.0005)
-threshold = 0.00125 #閾値 #10
+threshold = 0.00125 #閾値 #10 0.00125
 
 #ここで未来を予測できないところをNaNにしているが実戦ではNaNにしない
 train= make_training_data(EUF["close"].iloc[::-1].reset_index(drop=True), mlater, threshold, -1 * threshold) #順番とindexには気をつける
@@ -302,7 +309,7 @@ nancount = len(feature[feature.isnull().any(axis=1)])
 
 
 #ウィンドウ作成
-window_size = 5 #ラグ特徴量はあったほうがいい0.5->0.75
+window_size = 4 #ラグ特徴量はあったほうがいい0.5->0.75
 #10分後予測 size60 acc0.732
 #          size1   acc0.742
 #           size3   acc0.746
@@ -439,7 +446,7 @@ plt.show()
 
 #今から一日前のデータでテスト
 
-day = 60*60*24*4 #1日前までのチャートを取得
+day = 60*60*24*10 #1日前までのチャートを取得
 noweth = getklinedata("ETH",day)
 
 time.sleep(1)
@@ -457,10 +464,11 @@ print("nowtrain shape is ",nowtrain.shape)
 #nowfeature = pd.concat([NEUF_feature, NBUF_feature], axis=1)
 nowfeature = pd.DataFrame(NEUF_feature)
 nowconcat_feature_train = pd.concat([nowtrain, nowfeature], axis=1)
-print("nowconcat shape is ",nowconcat_feature_train.shape)
+print("nowconcat_feature_train shape is ",nowconcat_feature_train.shape)
 
 nowconcat_feature_train.dropna(how="any", inplace=True)
 nowconcat_feature_train.reset_index(drop=True, inplace=True)
+print("DROP nowconcat_feature_train shape is ",nowconcat_feature_train.shape)
 x2 = make_lag_feature(nowconcat_feature_train, window_size)
 #x2 = pd.DataFrame(nowconcat_feature_train)
 print("x2 shape is ",x2.shape)
