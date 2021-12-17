@@ -27,8 +27,9 @@ warnings.simplefilter("ignore")
 #受け取ったデータから特徴量を生成
 def make_feature(df, COIN):
     #考察
-    #Overlap Studiesよりもモメンタムインジケーターの方が重要度が高い
-    #ラグ特徴量はtrainが役に立っている,テクニカル指標のラグ特徴量はあまり役に立っていない   
+    #移動平均よりもモメンタムインジケーターの方が重要度が高い,実数値よりも割合で表したほうがいい
+    #ラグ特徴量はtrain(目的変数)が役に立っている,テクニカル指標のラグ特徴量はあまり役に立っていない
+    #trainには未来の情報が含まれているmlaterまでのtrainは使用してはならない
 
     df = df.iloc[::-1] #反転
     df["datetime"] = pd.to_datetime(df["date"])
@@ -39,10 +40,11 @@ def make_feature(df, COIN):
     df.drop(["date","datetime","unix", "symbol", "Volume USDT"], axis=1, inplace=True)
     #print(df.head())
 
-    f = [5,8,13,21,34,55,89,144]#,233
+    f = [5,8,13,21,34,55,89,144]#,233,377
     for i in f:
         df["rsi"+str(i)] = ta.RSI(df["close"], timeperiod=i)#重要
-        #df["ma"+str(i)] = ta.MA(df["close"], timeperiod=i)
+        
+        
         #df["dema"+str(i)] = ta.DEMA(df["close"], timeperiod=i)
         #df["sma"+str(i)] = ta.SMA(df["close"], timeperiod=i)
         #df["ema"+str(i)] = ta.EMA(df["close"], timeperiod=i)
@@ -51,7 +53,7 @@ def make_feature(df, COIN):
         #df["tema"+str(i)] = ta.TEMA(df["close"], timeperiod=i)
         #df["trima"+str(i)] = ta.TRIMA(df["close"], timeperiod=i)
         #df["upperband"+str(i)], df["middleband"+str(i)], df["lowerband"+str(i)] = ta.BBANDS(df["close"], timeperiod=i)
-        #df["trix"+str(i)] = ta.TRIX(df["close"], timeperiod=i)
+        df["trix"+str(i)] = ta.TRIX(df["close"], timeperiod=i)
         #df["tsf"+str(i)] = ta.TSF(df["close"], timeperiod=i)
         #df["adxr"+str(i)] = ta.ADXR(df["high"], df["low"], df["close"], timeperiod=i)
         df["natr"+str(i)] = ta.NATR(df["high"], df["low"], df["close"], timeperiod=i)#重要
@@ -60,7 +62,12 @@ def make_feature(df, COIN):
         df["cmo"+str(i)] = ta.CMO(df["close"],timeperiod=i)#重要
         #df["dx"+str(i)] = ta.DX(df["high"],df["low"],df["close"],timeperiod=i)
         df["mfi"+str(i)] = ta.MFI(df["high"],df["low"],df["close"],df["Volume "+COIN],timeperiod=i)
-        df["mom"+str(i)] = ta.MOM(df["close"],timeperiod=i)#すこし重要?
+        df["mom"+str(i)] = ta.MOM(df["close"],timeperiod=i)#すこし重要? 21だけ高い
+        df["roc"+str(i)] = ta.ROC(df["close"],timeperiod=i)
+        df["willr"+str(i)] = ta.WILLR(df["high"],df["low"],df["close"],timeperiod=i)
+        
+    
+
 
     #df["sar"] = ta.SAR(df["high"], df["low"], acceleration=0.02, maximum=0.2)
     df["adosc"] = ta.ADOSC(df["high"], df["low"], df["close"], df["Volume "+COIN], fastperiod=3, slowperiod=10)
@@ -68,11 +75,36 @@ def make_feature(df, COIN):
     #df["ht_trendline"] = ta.HT_TRENDLINE(df["close"])
     df["macd"], df["macdsignal"], df["macdhist"] = ta.MACD(df["close"], fastperiod=12, slowperiod=26, signalperiod=9)
     df["bop"] = ta.BOP(df["open"],df["high"],df["low"],df["close"]) #重要度１位
+    df["trange"] = ta.TRANGE(df["high"],df["low"],df["close"])
+    df["ht_dcperiod"] = ta.HT_DCPERIOD(df["close"])
+    #df["ht_dcphase"] = ta.HT_DCPHASE(df["close"])
+    df["inshape"], df["quadrature"] = ta.HT_PHASOR(df["close"])
+    #df["sine"], df["leadsine"] = ta.HT_SINE(df["close"])
+    df["integer"]= ta.HT_TRENDMODE(df["close"])
+
     
-    
 
 
-
+    #natr233
+    #natr144
+    #tradecount
+    #mfi21
+    #roc21
+    #natr5
+    #Volume
+    #natr8
+    #natr89
+    #obv
+    #natr55
+    #cmo233
+    #natr21
+    #natr13
+    #natr34
+    #mom21
+    #rsi233
+    #rsi144
+    #roc233
+    #cci34
 
 
 
@@ -147,7 +179,8 @@ def make_lag_feature(x,window_size):
     y = pd.DataFrame(x)
     for i in range(window_size):
         y = pd.concat(
-            [y, x.shift(i+1).add_suffix("_"+str(i+1))],
+            [y, x.drop(["train"], axis=1).shift(i+1).add_suffix("_"+str(i+1))],
+            #[y, x.shift(i+1).add_suffix("_"+str(i+1))], #未来の情報を落とさないといけない
             axis=1
         )
     #print(y.head())
@@ -226,6 +259,8 @@ mlater = 10 #何分後のup,downを予測するか
 
 #train= make_training_data(EUF["close"].iloc[int(len(EUF)/1.1):], mlater, 0.0005, -0.0005)
 threshold = 0.00125 #閾値 #10
+
+#ここで未来を予測できないところをNaNにしているが実戦ではNaNにしない
 train= make_training_data(EUF["close"].iloc[::-1].reset_index(drop=True), mlater, threshold, -1 * threshold) #順番とindexには気をつける
 train.columns = ["train"]
 #print(train)
@@ -245,8 +280,8 @@ del(train2)
 
 
 #説明変数の結合
-feature = pd.concat([EUF_feature, BUF_feature], axis=1)
-#feature = pd.DataFrame(EUF_feature)
+#feature = pd.concat([EUF_feature, BUF_feature], axis=1)
+feature = pd.DataFrame(EUF_feature)
 nancount = len(feature[feature.isnull().any(axis=1)])
 
 #print(nancount)
@@ -295,6 +330,7 @@ concat_feature_train.reset_index(drop=True, inplace=True)
 
 
 #ラグ特徴量を生成
+#x = pd.DataFrame(concat_feature_train)
 x = make_lag_feature(concat_feature_train, window_size) #NaNどうしてる？
 #print(x)
 x = x.dropna(how="any",inplace=False).reset_index(drop=True)
@@ -403,7 +439,7 @@ plt.show()
 
 #今から一日前のデータでテスト
 
-day = 60*60*24*2 #1日前までのチャートを取得
+day = 60*60*24*4 #1日前までのチャートを取得
 noweth = getklinedata("ETH",day)
 
 time.sleep(1)
@@ -418,13 +454,15 @@ nowtrain= make_training_data(noweth["close"].reset_index(drop=True), mlater, thr
 nowtrain.columns = ["train"]
 print("nowtrain shape is ",nowtrain.shape)
 
-nowfeature = pd.concat([NEUF_feature, NBUF_feature], axis=1)
+#nowfeature = pd.concat([NEUF_feature, NBUF_feature], axis=1)
+nowfeature = pd.DataFrame(NEUF_feature)
 nowconcat_feature_train = pd.concat([nowtrain, nowfeature], axis=1)
 print("nowconcat shape is ",nowconcat_feature_train.shape)
 
 nowconcat_feature_train.dropna(how="any", inplace=True)
 nowconcat_feature_train.reset_index(drop=True, inplace=True)
 x2 = make_lag_feature(nowconcat_feature_train, window_size)
+#x2 = pd.DataFrame(nowconcat_feature_train)
 print("x2 shape is ",x2.shape)
 x2 = x2.dropna(how="any").reset_index(drop=True) #これ怪しい
 x_now = x2.drop("train", axis=1)
