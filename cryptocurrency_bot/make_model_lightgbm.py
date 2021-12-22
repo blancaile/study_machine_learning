@@ -1,25 +1,13 @@
 import os
 import numpy as np
 import pandas as pd
-from pandas.core.indexes import period
-from pandas.core.tools import numeric
 import talib as ta
-import tensorflow as tf
-from tensorflow.python.keras.utils.np_utils import to_categorical
-import scipy.stats
-from tensorflow import keras
-from tensorflow.keras.layers import Dense, Activation
-from tensorflow.keras.models import Sequential
-from tensorflow.keras.optimizers import Adam
-from tensorflow.python.keras.layers.core import Dropout
 import matplotlib.pyplot as plt
 from sklearn.model_selection import train_test_split
-from keras.callbacks import EarlyStopping
 import sys
 import lightgbm as lgb
 #import optuna.integration.lightgbm as lgb #optuna
 from sklearn.metrics import accuracy_score
-import datetime
 import time
 import requests
 import warnings
@@ -221,7 +209,7 @@ def make_data(eth, COIN, mlater, threshold, window_size):
 
 #ファイルの読み込み
 EUF = pd.read_csv(os.getcwd() + r"\cryptocurrency_bot\datasets\ethusdt_f.csv") #timestamp降順
-BUF = pd.read_csv(os.getcwd() + r"\cryptocurrency_bot\datasets\btcusdt_f.csv")
+#BUF = pd.read_csv(os.getcwd() + r"\cryptocurrency_bot\datasets\btcusdt_f.csv")
 
 
 mlater = 5 #何分後のup,downを予測するか
@@ -229,14 +217,16 @@ threshold = 0.001 #閾値 #10 0.00125 #5 0.001
 window_size = 1 #ラグ特徴量はあったほうがいいacc0.5->0.75
 
 
+#目的変数と説明変数の生成
 x = make_data(EUF,"ETH",mlater,threshold,window_size)
 
 
+#データの分割
 x_train, x_test, t_train, t_test = train_test_split(x.drop("train", axis=1), x["train"], test_size=0.05, random_state=0, shuffle=False)
 x_train, x_eval, t_train, t_eval = train_test_split(x_train, t_train, test_size=0.1, random_state=0, shuffle=False)
 
 
-#分割後の各目的変数の数
+#分割後の各目的変数のカウント
 t_train_np = t_train.to_numpy()
 u, counts = np.unique(t_train_np, return_counts=True)
 print(u)      #0,     1,    2
