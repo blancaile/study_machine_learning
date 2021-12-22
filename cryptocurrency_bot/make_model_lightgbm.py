@@ -134,7 +134,6 @@ def make_lag_feature(x,window_size):
 
 
 
-
 #結果の描画
 def modelplot(history):
     plt.plot(history.history['accuracy'])
@@ -176,123 +175,77 @@ def getklinedata(coin,day):
     return df
 
 
+
+#チャートデータ,コインの名前,何分後を予測するか,閾値,ラグ特徴量の生成数を受け取って目的変数と説明変数の結合データを返す
+def make_data(eth, COIN, mlater, threshold, window_size):
+
+
+    #説明変数を生成
+    EUF_feature = make_feature(eth,COIN)
+    #print("nEUFF shape is ",EUF_feature.shape)
+
+
+    #目的変数を生成
+    train= make_training_data(eth["close"].reset_index(drop=True), mlater, threshold, -1 * threshold) #順番とindexには気をつける
+    train.columns = ["train"]
+    #print("nowtrain shape is ",train.shape)
+
+
+    #各目的変数のカウント
+    train2 = train.to_numpy()
+    u, counts = np.unique(train2, return_counts=True) #同じ出現率がよい
+    print(u)      #0,     1,    2
+    print(counts) #[164008 169315 165253]
+    
+
+    #説明変数と目的変数の結合
+    concat_feature_train = pd.concat([train, EUF_feature], axis=1)
+    #print("concat_feature_train shape is ",concat_feature_train.shape)
+
+
+    #NaNの除去
+    concat_feature_train.dropna(how="any", inplace=True)
+    concat_feature_train.reset_index(drop=True, inplace=True)
+    #print("DROP nowconcat_feature_train shape is ",concat_feature_train.shape)
+
+
+    #ラグ特徴量の生成
+    x = make_lag_feature(concat_feature_train, window_size)
+    #x = pd.DataFrame(nowconcat_feature_train) #ラグ特徴量要らないときはこれ
+    #print("x2 shape is ",x.shape)
+
+
+    return x.dropna(how="any").reset_index(drop=True)
+
+
+
 #ファイルの読み込み
-EUF = pd.read_csv(os.getcwd() + r"\cryptocurrency_bot\datasets\ethusdt_f.csv")
+EUF = pd.read_csv(os.getcwd() + r"\cryptocurrency_bot\datasets\ethusdt_f.csv") #timestamp降順
 BUF = pd.read_csv(os.getcwd() + r"\cryptocurrency_bot\datasets\btcusdt_f.csv")
 
 
-#説明変数を生成
-#BUF_feature = make_feature(BUF.iloc[:int(len(BUF)/1), :],"BTC") #データが入りきらないとき
-#EUF_feature = make_feature(EUF.iloc[:int(len(EUF)/1), :],"ETH")
-EUF_feature = make_feature(EUF,"ETH")
-BUF_feature = make_feature(BUF,"BTC")
-#print("BUF shape is", BUF_feature.shape)
-#print("EUF shape is", EUF_feature.shape)
-#feature = make_feature(EUF,"ETH") #本当ならすべてのデータを取り込みたい
-
-#目的変数を生成
 mlater = 5 #何分後のup,downを予測するか
+threshold = 0.001 #閾値 #10 0.00125 #5 0.001
+window_size = 1 #ラグ特徴量はあったほうがいいacc0.5->0.75
 
 
-#train= make_training_data(EUF["close"].iloc[int(len(EUF)/1.1):], mlater, 0.0005, -0.0005)
-threshold = 0.001 #閾値 #10 0.00125
-
-#ここで未来を予測できないところをNaNにしているが実戦ではNaNにしない
-train= make_training_data(EUF["close"].iloc[::-1].reset_index(drop=True), mlater, threshold, -1 * threshold) #順番とindexには気をつける
-train.columns = ["train"]
-#print(train)
-del(EUF)
-del(BUF)
-#train = train.iloc[int(len(EUF)/3):]   #データが入りきらないとき
-train2 = train.to_numpy()
-u, counts = np.unique(train2, return_counts=True) #同じ出現率がよい
-print(u)      #0,     1,    2
-print(counts) #[164008 169315 165253]
-del(train2)
-#lightgbmはいらない
-#one hot encoding
-#train = to_categorical(train)
-
-#sys.exit()
-
-
-#説明変数の結合
-#feature = pd.concat([EUF_feature, BUF_feature], axis=1)
-feature = pd.DataFrame(EUF_feature)
-nancount = len(feature[feature.isnull().any(axis=1)])
-
-#print(nancount)
-#feature = feature.dropna(how="any").to_numpy()
- 
-#feature = feature.dropna(how="any") #///
-
-
-#目的変数データ生成時にできたnanを含む行を説明変数データから削除
-#slide_feature = np.delete(feature, [i for i in range(len(feature) - mlater, len(feature))], axis=0) #ndarray
-#slide_feature = feature.drop(i for i in range(len(feature) - mlater, len(feature))) #dataframe #///
-
-#print(nancount)
-#標準化
-#feature = scipy.stats.zscore(feature)
-#slide_feature = scipy.stats.zscore(feature)
-#print("feature shape is ",feature.shape)
-
-
-#ウィンドウ作成
-window_size = 1 #ラグ特徴量はあったほうがいい0.5->0.75
-#10分後予測 size60 acc0.732
-#          size1   acc0.742
-#           size3   acc0.746
-#           size5  acc0.750
-#           size10  acc0.73
-#           size35  acc0.73
-
-#slide_feature = strided_axis0(feature, window_size)
-#print("feature shape is ",feature.shape)
-
-
-#教師データと訓練データのサイズ調整
-#train = np.delete(train, [i for i in range(window_size + nancount - 1)], axis=0)
-#train = np.delete(train, [i for i in range(nancount)], axis=0) #ndarray, lightgbm
-#train = train.drop(i for i in range(nancount))
-#print("train shape is ",train.shape)
-
-
-
-concat_feature_train = pd.concat([train, feature], axis=1)
-
-
-#print(concat_feature_train)
-concat_feature_train.dropna(how="any", inplace=True)
-concat_feature_train.reset_index(drop=True, inplace=True)
-
-
-
-#ラグ特徴量を生成
-#x = pd.DataFrame(concat_feature_train)
-x = make_lag_feature(concat_feature_train, window_size) #NaNどうしてる？
-#print(x)
-x = x.dropna(how="any",inplace=False).reset_index(drop=True)
-#print(x)
-print("feature shape is ", x.shape)
-#sys.exit()
-#x = x.iloc[:int(len(x)/2), :]
-
+x = make_data(EUF,"ETH",mlater,threshold,window_size)
 
 
 x_train, x_test, t_train, t_test = train_test_split(x.drop("train", axis=1), x["train"], test_size=0.05, random_state=0, shuffle=False)
-del(x)
 x_train, x_eval, t_train, t_eval = train_test_split(x_train, t_train, test_size=0.1, random_state=0, shuffle=False)
+
+
+#分割後の各目的変数の数
 t_train_np = t_train.to_numpy()
-u, counts = np.unique(t_train_np, return_counts=True) #同じ出現率がよい
+u, counts = np.unique(t_train_np, return_counts=True)
 print(u)      #0,     1,    2
 print(counts) #[164008 169315 165253]
 
 
 lgb_train = lgb.Dataset(x_train, t_train)
 lgb_eval = lgb.Dataset(x_eval, t_eval, reference=lgb_train)
-#print(x_train.columns)
-#print(t_train.columns)
+
 
 params = {
     "task": "train",
@@ -313,6 +266,7 @@ params = {
     "num_iterations": 50,
     "learning_rate": 0.01
 }
+
 
 best_params, tuning_history = dict(), list()
 model_lgb = lgb.train(params=params,train_set=lgb_train,verbose_eval=10,valid_sets=lgb_eval,num_boost_round=1000)
@@ -338,14 +292,31 @@ print("acc: ",acc)
 lgb.plot_importance(model_lgb, figsize=(12, 6))
 plt.show()
 
-#保存したモデルの呼び出し
-# best = lgb.Booster(model_file=os.getcwd() +r"\cryptocurrency_bot\model.txt")
-# ypred = best.predict(x_test,num_iteration=best.best_iteration)
-# ypred = np.argmax(ypred,axis=1)
 
-# acc = sum(t_test == ypred) / len(t_test)
-# print(len(t_test))
-# print("acc: ",acc)
+#今から一日前までのデータでテスト
+
+day = 60*60*24*1 #1日前までのチャートを取得
+noweth = getklinedata("ETH",day)
+
+#訓練したモデルの読み込み
+best = lgb.Booster(model_file=os.getcwd() +r"\cryptocurrency_bot\model.txt")
+
+
+x = make_data(noweth.iloc[::-1],"ETH",mlater,threshold,window_size)
+#目的変数と説明変数の生成
+x_now = x.drop("train",axis=1)
+t_now = x["train"]
+
+
+ypred = best.predict(x_now,num_iteration=best.best_iteration)
+ypred = np.argmax(ypred,axis=1)
+
+
+acc = sum(t_now == ypred) / len(t_now)
+print(len(t_now))
+print("acc: ",acc)
+
+
 
 
 #ccxtを使用
@@ -374,51 +345,3 @@ plt.show()
 
 # info = exchange.fetch_ticker(symbol="ETH/USDT")
 #print(info)
-
-
-
-#今から一日前のデータでテスト
-
-day = 60*60*24*1 #1日前までのチャートを取得
-noweth = getklinedata("ETH",day)
-
-time.sleep(1)
-nowbtc = getklinedata("BTC",day)
-print("noweth shape is ",noweth.shape)
-
-NBUF_feature = make_feature(nowbtc.iloc[::-1],"BTC")
-NEUF_feature = make_feature(noweth.iloc[::-1],"ETH")
-print("nEUFF shape is ",NEUF_feature.shape)
-
-nowtrain= make_training_data(noweth["close"].reset_index(drop=True), mlater, threshold, -1 * threshold)
-nowtrain.columns = ["train"]
-print("nowtrain shape is ",nowtrain.shape)
-
-#nowfeature = pd.concat([NEUF_feature, NBUF_feature], axis=1)
-nowfeature = pd.DataFrame(NEUF_feature)
-nowconcat_feature_train = pd.concat([nowtrain, nowfeature], axis=1)
-print("nowconcat_feature_train shape is ",nowconcat_feature_train.shape)
-
-nowconcat_feature_train.dropna(how="any", inplace=True)
-nowconcat_feature_train.reset_index(drop=True, inplace=True)
-print("DROP nowconcat_feature_train shape is ",nowconcat_feature_train.shape)
-x2 = make_lag_feature(nowconcat_feature_train, window_size)
-#x2 = pd.DataFrame(nowconcat_feature_train)
-print("x2 shape is ",x2.shape)
-x2 = x2.dropna(how="any").reset_index(drop=True) #これ怪しい
-x_now = x2.drop("train", axis=1)
-#print("xnow is \n",x_now)
-t_now = x2["train"]
-t_now2 = t_now.to_numpy()
-u, counts = np.unique(t_now2, return_counts=True) #同じ出現率がよい
-print(u)      #0,     1,    2
-print(counts) #[164008 169315 165253]
-del(t_now2)
-#print("t_now is \n",t_now)
-best = lgb.Booster(model_file=os.getcwd() +r"\cryptocurrency_bot\model.txt")
-ypred = best.predict(x_now,num_iteration=best.best_iteration)
-ypred = np.argmax(ypred,axis=1)
-
-acc = sum(t_now == ypred) / len(t_now)
-print(len(t_now))
-print("acc: ",acc)
