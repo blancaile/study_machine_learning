@@ -14,12 +14,18 @@ import warnings
 warnings.simplefilter("ignore")
 from hurst import compute_Hc
 
+
 #移動平均乖離率
 def estrangement_rate(close, es):
 
     df = pd.DataFrame()
     df["es"] = (close - es)*100/es
     return df
+
+
+
+
+
 
 
 #受け取ったデータから特徴量を生成
@@ -30,9 +36,9 @@ def make_feature(df, COIN):
 
     df = df.iloc[::-1] #反転
     df["datetime"] = pd.to_datetime(df["date"])
-    df["minute"] = df["datetime"].dt.minute
-    df["hour"] = df["datetime"].dt.hour
-    df["dayofweek"] = df["datetime"].dt.dayofweek
+    #df["minute"] = df["datetime"].dt.minute
+    #df["hour"] = df["datetime"].dt.hour
+    #df["dayofweek"] = df["datetime"].dt.dayofweek
     df.drop(["date","datetime","unix", "symbol", "Volume USDT"], axis=1, inplace=True)
 
 
@@ -47,9 +53,14 @@ def make_feature(df, COIN):
     df["trange"] = ta.TRANGE(df["high"],df["low"],df["close"])#
     df["TP"] = df[["high","low","close"]].mean(axis=1)
     df["VOLATILITY"] = df["trange"] / (df["TP"] * 100)
-        
+    #df["HurstExponent"]= compute_Hc(df["close"])[0]
+    #df["HurstExponent2"] = df['close'].rolling(101).apply(lambda x: compute_Hc(x)[0])#ハースト指数
 
-    f=[7,14,30]
+
+    #print(df.head(150))
+    #sys.exit()
+    #f=[7,14,30]
+    f=[2,4,8,16,32]
     for i in f:
         df["trix"+str(i)] = ta.TRIX(df["close"], timeperiod=i)
         df["roc"+str(i)] = ta.ROC(df["close"],timeperiod=i)
@@ -69,6 +80,9 @@ def make_feature(df, COIN):
         df["pct_change"+str(i)] = df["close"].pct_change(periods=i)#騰落率
         df["stddevPCT"+str(i)] = ta.STDDEV(df["pct_change"+str(i)], timeperiod=i, nbdev=1)#騰落率の標準偏差
 
+    #for clm in df:
+    #    for i in f:
+    #        df["ROCP_"+str(i)+clm] = ta.ROC(df[clm],timeperiod=i)
 
     df.drop(["open","high","low"], axis=1, inplace=True)
     #return df.add_suffix("_"+COIN).reset_index(drop=True)
@@ -110,7 +124,8 @@ def make_lag_feature(x,window_size):
     y = pd.DataFrame(x)
     for i in range(window_size):
         y = pd.concat(
-            [y, x.drop(["train","bop","macd","macdsignal","macdhist","adosc","minute","hour","dayofweek"], axis=1).shift(i+1).add_suffix("_"+str(i+1))],
+            #"minute","hour","dayofweek"
+            [y, x.drop(["train","bop","macd","macdsignal","macdhist","adosc"], axis=1).shift(i+1).add_suffix("_"+str(i+1))],
             #[y, x.shift(i+1).add_suffix("_"+str(i+1))], #未来の情報を落とさないといけない
             axis=1
         )
@@ -119,26 +134,6 @@ def make_lag_feature(x,window_size):
         
     print("")
     return y
-
-
-
-#結果の描画
-def modelplot(history):
-    plt.plot(history.history['accuracy'])
-    plt.plot(history.history['val_accuracy'])
-    plt.title('Model accuracy')
-    plt.ylabel('Accuracy')
-    plt.xlabel('Epoch')
-    plt.legend(['Train', 'Test'], loc='upper left')
-    plt.show()
-
-    plt.plot(history.history['loss'])
-    plt.plot(history.history['val_loss'])
-    plt.title('Model loss')
-    plt.ylabel('Loss')
-    plt.xlabel('Epoch')
-    plt.legend(['Train', 'Test'], loc='upper left')
-    plt.show()
 
 
 
@@ -306,32 +301,3 @@ acc = sum(t_now == ypred) / len(t_now)
 print(len(t_now))
 print("acc: ",acc)
 
-
-
-
-#ccxtを使用
-#import ccxt
-
-#key読み込み
-# apikey = ""
-# secretkey = ""
-# with open(os.getcwd() + r"\cryptocurrency_bot\binance_api_key.txt","r") as f:
-#     for line in f:
-#         data = line.strip().split("=")
-#         if data[0] == "api_key":
-#             apikey = data[1]
-#         elif data[0] == "secret_key":
-#             secretkey = data[1]
-# f.close()
-
-
-
-
-
-# exchange = ccxt.binanceusdm({
-#     "apikey": apikey,
-#     "secret": secretkey,
-# })
-
-# info = exchange.fetch_ticker(symbol="ETH/USDT")
-#print(info)

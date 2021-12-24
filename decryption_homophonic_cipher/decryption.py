@@ -29,7 +29,7 @@ for i in range(32):
         hist_code1.loc[i] = [data.count(str(i)), data.count(str(i)) * 100 / frequency]
     
 
-#print(hist_code1["frequency"])
+print(hist_code1["frequency"])
 
 
 #連続した文字列の取得
@@ -51,12 +51,47 @@ for i in range(32):
 # hist3.to_csv(os.getcwd() + "\decryption_homophonic_cipher/three_text.csv")
 
 def trans(i):
+    # if i == "12" or i == "31": #7.407407 + 5.882353
+    #     i = "T "
+    # elif i == "28": #4.357298
+    #     i = "H "
+    # elif i == "18" or i == "26": #5.664488 + 5/4.357298 or 26/6.100218
+    #     i = "E "        #ここまでは合ってる前提
+    # elif i == "30" or i == "24":
+    #     i = "R "
+
+    # elif i == "21":
+    #     i = "I "
+    # elif i == "07":
+    #     i = "N "
+
+    # elif i == "01" or i == "05":
+    #     i = "A "
+    # elif i == "16":
+    #     i = "S "
+
     if i == "12" or i == "31":
         i = "T "
     elif i == "28":
         i = "H "
-    elif i == "18":
-        i = "E "        #ここまでは合ってる前提
+    elif i == "18" or i == "26":
+        i = "E "
+    elif i == "30":
+        i = "R "
+
+    elif i == "05":#怪しい
+        i = "I "
+    elif i == "07" or i == "08":
+        i = "N "
+    elif i == "14":
+        i = "G "
+
+    elif i == "19" or i == "21":
+        i = "A "
+    elif i == "24":
+        i = "D "
+    
+
 
     return i
     
@@ -70,13 +105,27 @@ def decryption(df, t):
             print(i, end=" ")#index
         print("  " + str(j[3]))#index
         #print(i[3])#count
-        
+    print(" ")
 
 twotext = pd.read_csv(os.getcwd() + r"\decryption_homophonic_cipher/two_text.csv")
 threetext = pd.read_csv(os.getcwd() + r"\decryption_homophonic_cipher/three_text.csv")
 
 decryption(twotext, 2)
 decryption(threetext, 2)
+
+
+df = threetext.query("count >= "+str(1))
+for j in df.itertuples():
+    for i in range(len(j[2].split())-2):
+        if j[2].split()[i] != "05" and (j[2].split()[i+1] == "07" or j[2].split()[i+1] == "08") and j[2].split()[i+2] != "14" and j[2].split()[i+2] == "24":
+        #if j[2].split()[i] == "05" and (j[2].split()[i+2] == "04"): #or j[2].split()[i+2] == "07"):
+            print(str(j[2].split()[i]) + " " + str(j[2].split()[i+1]) + " " + str(j[2].split()[i+2]), end=" ")
+            print("  " + str(j[3]))#index
+        #print(j[2].split()[i], end=" ")#index
+    #print("  " + str(j[3]))#index
+    #print(i[3])#count
+print(" ")
+
 
 #暗号文の出力
 for i in dfdata:
