@@ -1,8 +1,62 @@
+import datetime
+from time import timezone
 import ccxt
 import os
+from dateutil.tz import UTC
+import lightgbm as lgb
+from matplotlib.pyplot import axis
+import make_model_lightgbm as mm
+import pandas as pd
+import numpy as np
 
 
+def now_predict(COIN):
+    day = 60*60*2 #1日前までのチャートを取得
+    noweth = mm.getklinedata(COIN,day)
+    date = pd.to_datetime(noweth["date"]).iloc[-1].replace(tzinfo=UTC).astimezone(datetime.timezone(datetime.timedelta(hours=9))).replace(tzinfo=None)
+    print(str(date) + "から" + str(mm.mlater) + "分後のdown/stay/up確率を求めます")
+    x = mm.make_feature(noweth.iloc[::-1], COIN)
+    x["train"] = x["close"]
+    x = mm.make_lag_feature(x, mm.window_size)
+    x_now = x.tail(1).drop(["train"], axis=1)
+    #print(x_now.isnull().values.sum()) #NaNカウント
 
+    best = lgb.Booster(model_file=os.getcwd() +r"\cryptocurrency_bot\model.txt")
+    ypred = best.predict(x_now,num_iteration=best.best_iteration)
+
+    return ypred
+
+
+def now_order(y, COIN):
+    #手持ちUSDTを取得
+    balance = exchange.fetch_balance()["USDT"]["free"]
+    print("今の手持ちUSDTは" + str(balance))
+
+
+    #手持ちUSDTとモデルの確率とケリー基準?から何USDT使うか決定
+    price = balance / 10 #仮
+
+
+    #現在ETH/USDT価格を取得
+    #ticker = exchange.fetch_ticker(COIN+"/USDT")["last"]
+    #print(ticker)
+
+    bidorask = lambda a: "asks" if a == 2 else "bids"
+    ob = exchange.fetch_order_book(COIN+"/USDT")[bidorask(y)][0][0] #bidsこの価格でなら買う(今より安い) #asksこの価格でなら売る(今より高い)
+    print(ob)
+
+    #注文
+    side = lambda a: "buy" if a == 2 else "sell"
+    order = exchange.create_order(
+        symbol = COIN+"/USDT",
+        type = "limit",
+        price = ob, #指値価格
+        side = side(y),
+        amount = price/ob
+    )
+
+    print(order)
+    return order["id"]
 
 
 
@@ -25,28 +79,23 @@ exchange = ccxt.binanceusdm({
     "secret": secretkey,
 })
 
-#価格取得
-ticker = exchange.fetch_ticker("ETH/USDT")
-
-print(ticker["last"])
-
-#口座取得
-balance = exchange.fetch_balance()
-
-print(balance["USDT"])
-
-
 
 
 #モデルで予測
 
-#手持ちUSDTを取得
+ypred = now_predict("ETH")
+#[[0.3230353  0.36189054 0.31507416]]
+print(ypred)
+y = np.argmax(ypred,axis=1)[0]
+print(y)#0,1,2
 
-#手持ちUSDTとモデルの確率とケリー基準?から何USDT使うか決定
+#print(ypred[0][y]) #一番高い予測の確率表示
 
-#現在ETH/USDT価格を取得
 
-#注文
+if y != 1:
+    order_id = now_order(y,"ETH")
+
+
 
 #{注文している間はループ
 #現在ETH/USDT価格を取得
