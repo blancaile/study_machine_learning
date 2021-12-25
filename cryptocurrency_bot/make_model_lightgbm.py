@@ -23,11 +23,6 @@ def estrangement_rate(close, es):
     return df
 
 
-
-
-
-
-
 #受け取ったデータから特徴量を生成
 def make_feature(df, COIN):
     #移動平均よりもモメンタムインジケーターの方が重要度が高い,実数値よりも割合で表したほうがいい
@@ -89,7 +84,6 @@ def make_feature(df, COIN):
     return df.reset_index(drop=True)
 
 
-
 #up,stay,downの閾値とxを受け取りx分後のethのcloseの変化率を３値(2,1,0)に分類する
 def make_training_data(ed, x = 1, up = 0.0001, down = -0.0001):
     e_d = ed.to_dict() #dictionaryの方が早い
@@ -116,7 +110,6 @@ def make_training_data(ed, x = 1, up = 0.0001, down = -0.0001):
     return eth_ratio.reset_index(drop=True)
 
 
-
 #window_sizeまでのラグ特徴量を生成
 def make_lag_feature(x,window_size):
     #name = x.columns.tolist()
@@ -136,7 +129,6 @@ def make_lag_feature(x,window_size):
     return y
 
 
-
 #binance apiからcoin futuresの１日前からのklinesを持ってくる
 def getklinedata(coin,day):
     sstamps=int(time.time()-day)*1000
@@ -150,13 +142,12 @@ def getklinedata(coin,day):
     df = df.set_axis(["date","open","high","low","close","Volume "+coin,"tradecount"],axis=1).astype(float)
     df["date"] = pd.to_datetime(df["date"],unit="ms")
 
-
+    #print(df)
     df["unix"] = df["date"]
     df["symbol"] = df["date"]
     df["Volume USDT"] = df["date"]
 
     return df
-
 
 
 #チャートデータ,コインの名前,何分後を予測するか,閾値,ラグ特徴量の生成数を受け取って目的変数と説明変数の結合データを返す
@@ -201,103 +192,107 @@ def make_data(eth, COIN, mlater, threshold, window_size):
     return x.dropna(how="any").reset_index(drop=True)
 
 
-
-#ファイルの読み込み
-EUF = pd.read_csv(os.getcwd() + r"\cryptocurrency_bot\datasets\ethusdt_f.csv") #timestamp降順
-#BUF = pd.read_csv(os.getcwd() + r"\cryptocurrency_bot\datasets\btcusdt_f.csv")
-
-
-mlater = 5 #何分後のup,downを予測するか
-threshold = 0.001 #閾値 #10 0.00125 #5 0.001
-window_size = 1 #ラグ特徴量はあったほうがいいacc0.5->0.75
+def main():
+    #ファイルの読み込み
+    EUF = pd.read_csv(os.getcwd() + r"\cryptocurrency_bot\datasets\ethusdt_f.csv") #timestamp降順
+    #BUF = pd.read_csv(os.getcwd() + r"\cryptocurrency_bot\datasets\btcusdt_f.csv")
 
 
-#目的変数と説明変数の生成
-x = make_data(EUF,"ETH",mlater,threshold,window_size)
+    mlater = 5 #何分後のup,downを予測するか
+    threshold = 0.001 #閾値 #10 0.00125 #5 0.001
+    window_size = 1 #ラグ特徴量はあったほうがいいacc0.5->0.75
 
 
-#データの分割
-x_train, x_test, t_train, t_test = train_test_split(x.drop("train", axis=1), x["train"], test_size=0.05, random_state=0, shuffle=False)
-x_train, x_eval, t_train, t_eval = train_test_split(x_train, t_train, test_size=0.1, random_state=0, shuffle=False)
+    #目的変数と説明変数の生成
+    x = make_data(EUF,"ETH",mlater,threshold,window_size)
 
 
-#分割後の各目的変数のカウント
-t_train_np = t_train.to_numpy()
-u, counts = np.unique(t_train_np, return_counts=True)
-print(u)      #0,     1,    2
-print(counts) #[164008 169315 165253]
+    #データの分割
+    x_train, x_test, t_train, t_test = train_test_split(x.drop("train", axis=1), x["train"], test_size=0.05, random_state=0, shuffle=False)
+    x_train, x_eval, t_train, t_eval = train_test_split(x_train, t_train, test_size=0.1, random_state=0, shuffle=False)
 
 
-lgb_train = lgb.Dataset(x_train, t_train)
-lgb_eval = lgb.Dataset(x_eval, t_eval, reference=lgb_train)
+    #分割後の各目的変数のカウント
+    t_train_np = t_train.to_numpy()
+    u, counts = np.unique(t_train_np, return_counts=True)
+    print(u)      #0,     1,    2
+    print(counts) #[164008 169315 165253]
 
 
-params = {
-    "task": "train",
-    "boosting": "rf",
-    "extra_trees": True,
-    "objective": "multiclass",
-    "num_class": 3,
-    "metric": "multi_logloss",
-    "device": "gpu",
-    "bagging_freq": 1,
-    "bagging_fraction": 0.9,
-    'feature_pre_filter': False,
-    "lambda_l1": 3.946722917499177e-05,
-    "lambda_l2": 4.6903285635226136e-07,
-    "num_levels": 244,
-    "feature_fraction": 1.0,
-    "min_child_samples": 5,
-    "num_iterations": 50,
-    "learning_rate": 0.01
-}
+    lgb_train = lgb.Dataset(x_train, t_train)
+    lgb_eval = lgb.Dataset(x_eval, t_eval, reference=lgb_train)
 
 
-best_params, tuning_history = dict(), list()
-model_lgb = lgb.train(params=params,train_set=lgb_train,verbose_eval=10,valid_sets=lgb_eval,num_boost_round=1000)
-#Best Params: {'task': 'train', 'boosting': 'rf', 'extra_trees': True, 'objective': 'multiclass', 'num_class': 3, 
-# 'metric': 'multi_logloss', 'device': 'gpu', 'bagging_freq': 1, 'bagging_fraction': 0.9, 'feature_pre_filter': False, 
-# 'lambda_l1': 3.946722917499177e-05, 'lambda_l2': 4.6903285635226136e-07, 'num_leaves': 244, 'feature_fraction': 1.0,
-#  'min_child_samples': 5, 'num_iterations': 50, 'early_stopping_round': None}
-
-#print("Best Params:", model_lgb.params)
-#print("Tuning history:", tuning_history)
-
-model_lgb.save_model(os.getcwd() +r"\cryptocurrency_bot\model.txt") #モデル保存
-
-y_pred = model_lgb.predict(x_test,num_iteration=model_lgb.best_iteration)
-y_pred = np.argmax(y_pred, axis=1)
-
-
-acc = sum(t_test == y_pred) / len(t_test)
-print(len(t_test))
-print("acc: ",acc)
-
-
-lgb.plot_importance(model_lgb, figsize=(12, 6))
-plt.show()
+    params = {
+        "task": "train",
+        "boosting": "rf",
+        "extra_trees": True,
+        "objective": "multiclass",
+        "num_class": 3,
+        "metric": "multi_logloss",
+        "device": "gpu",
+        "bagging_freq": 1,
+        "bagging_fraction": 0.9,
+        'feature_pre_filter': False,
+        "lambda_l1": 3.946722917499177e-05,
+        "lambda_l2": 4.6903285635226136e-07,
+        "num_levels": 244,
+        "feature_fraction": 1.0,
+        "min_child_samples": 5,
+        "num_iterations": 50,
+        "learning_rate": 0.01
+    }
 
 
-#今から一日前までのデータでテスト
+    best_params, tuning_history = dict(), list()
+    model_lgb = lgb.train(params=params,train_set=lgb_train,verbose_eval=10,valid_sets=lgb_eval,num_boost_round=1000)
+    #Best Params: {'task': 'train', 'boosting': 'rf', 'extra_trees': True, 'objective': 'multiclass', 'num_class': 3, 
+    # 'metric': 'multi_logloss', 'device': 'gpu', 'bagging_freq': 1, 'bagging_fraction': 0.9, 'feature_pre_filter': False, 
+    # 'lambda_l1': 3.946722917499177e-05, 'lambda_l2': 4.6903285635226136e-07, 'num_leaves': 244, 'feature_fraction': 1.0,
+    #  'min_child_samples': 5, 'num_iterations': 50, 'early_stopping_round': None}
 
-day = 60*60*24*1 #1日前までのチャートを取得
-noweth = getklinedata("ETH",day)
+    #print("Best Params:", model_lgb.params)
+    #print("Tuning history:", tuning_history)
 
-#訓練したモデルの読み込み
-best = lgb.Booster(model_file=os.getcwd() +r"\cryptocurrency_bot\model.txt")
+    model_lgb.save_model(os.getcwd() +r"\cryptocurrency_bot\model.txt") #モデル保存
 
-
-x = make_data(noweth.iloc[::-1],"ETH",mlater,threshold,window_size)
-#目的変数と説明変数の生成
-x_now = x.drop("train",axis=1)
-t_now = x["train"]
-
-
-ypred = best.predict(x_now,num_iteration=best.best_iteration)
-ypred = np.argmax(ypred,axis=1)
+    y_pred = model_lgb.predict(x_test,num_iteration=model_lgb.best_iteration)
+    y_pred = np.argmax(y_pred, axis=1)
 
 
-acc = sum(t_now == ypred) / len(t_now)
-print(len(t_now))
-print("acc: ",acc)
+    acc = sum(t_test == y_pred) / len(t_test)
+    print(len(t_test))
+    print("acc: ",acc)
 
+
+    lgb.plot_importance(model_lgb, figsize=(12, 6))
+    plt.show()
+
+
+    #今から一日前までのデータでテスト
+
+    day = 60*60*24*1 #1日前までのチャートを取得
+    noweth = getklinedata("ETH",day)
+
+    #訓練したモデルの読み込み
+    best = lgb.Booster(model_file=os.getcwd() +r"\cryptocurrency_bot\model.txt")
+
+
+    x = make_data(noweth.iloc[::-1],"ETH",mlater,threshold,window_size)
+    #目的変数と説明変数の生成
+    x_now = x.drop("train",axis=1)
+    t_now = x["train"]
+
+
+    ypred = best.predict(x_now,num_iteration=best.best_iteration)
+    ypred = np.argmax(ypred,axis=1)
+
+
+    acc = sum(t_now == ypred) / len(t_now)
+    print(len(t_now))
+    print("acc: ",acc)
+
+
+#他のファイルから呼び出したとき実行しないようにするために書く
+if __name__ == "__main__":
+    main()
