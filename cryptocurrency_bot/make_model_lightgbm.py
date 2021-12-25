@@ -158,7 +158,7 @@ def make_data(eth, COIN, mlater, threshold, window_size):
     EUF_feature = make_feature(eth,COIN)
     #print("nEUFF shape is ",EUF_feature.shape)
 
-
+    
     #目的変数を生成
     train= make_training_data(eth["close"].reset_index(drop=True), mlater, threshold, -1 * threshold) #順番とindexには気をつける
     train.columns = ["train"]
@@ -198,9 +198,6 @@ def main():
     #BUF = pd.read_csv(os.getcwd() + r"\cryptocurrency_bot\datasets\btcusdt_f.csv")
 
 
-    mlater = 5 #何分後のup,downを予測するか
-    threshold = 0.001 #閾値 #10 0.00125 #5 0.001
-    window_size = 1 #ラグ特徴量はあったほうがいいacc0.5->0.75
 
 
     #目的変数と説明変数の生成
@@ -291,6 +288,11 @@ def main():
     acc = sum(t_now == ypred) / len(t_now)
     print(len(t_now))
     print("acc: ",acc)
+
+
+mlater = 5 #何分後のup,downを予測するか
+threshold = 0.001 #閾値 #10 0.00125 #5 0.001
+window_size = 1 #ラグ特徴量はあったほうがいいacc0.5->0.75
 
 
 #他のファイルから呼び出したとき実行しないようにするために書く
