@@ -31,20 +31,20 @@ def make_feature(df, COIN):
 
     df = df.iloc[::-1] #反転
     df["datetime"] = pd.to_datetime(df["date"])
-    #df["minute"] = df["datetime"].dt.minute
-    #df["hour"] = df["datetime"].dt.hour
-    #df["dayofweek"] = df["datetime"].dt.dayofweek
+    df["minute"] = df["datetime"].dt.minute
+    df["hour"] = df["datetime"].dt.hour
+    df["dayofweek"] = df["datetime"].dt.dayofweek
     df.drop(["date","datetime","unix", "symbol", "Volume USDT"], axis=1, inplace=True)
 
 
     
     df["high-low"] = df["high"] - df["low"]
     #df["sar"] = ta.SAR(df["high"], df["low"], acceleration=0.02, maximum=0.2)
-    df["adosc"] = ta.ADOSC(df["high"], df["low"], df["close"], df["Volume "+COIN], fastperiod=3, slowperiod=10)
+    #df["adosc"] = ta.ADOSC(df["high"], df["low"], df["close"], df["Volume "+COIN], fastperiod=3, slowperiod=10)
     df["obv"] = ta.OBV(df["close"],df["Volume "+COIN])#すこし重要?->重要度１位になった
     #df["ht_trendline"] = ta.HT_TRENDLINE(df["close"])
     df["macd"], df["macdsignal"], df["macdhist"] = ta.MACD(df["close"], fastperiod=12, slowperiod=26, signalperiod=9)
-    df["bop"] = ta.BOP(df["open"],df["high"],df["low"],df["close"]) #未来の情報を含むと重要度が１位になる
+    #df["bop"] = ta.BOP(df["open"],df["high"],df["low"],df["close"]) #未来の情報を含むと重要度が１位になる
     df["trange"] = ta.TRANGE(df["high"],df["low"],df["close"])#
     df["TP"] = df[["high","low","close"]].mean(axis=1)
     df["VOLATILITY"] = df["trange"] / (df["TP"] * 100)
@@ -55,20 +55,19 @@ def make_feature(df, COIN):
     #print(df.head(150))
     #sys.exit()
     #f=[7,14,30]
-    f=[2,4,8,16,32]
+    f=[8,16,32,64]
     for i in f:
         df["trix"+str(i)] = ta.TRIX(df["close"], timeperiod=i)
-        df["roc"+str(i)] = ta.ROC(df["close"],timeperiod=i)
+        #df["roc"+str(i)] = ta.ROC(df["close"],timeperiod=i)
         df["MAER"+str(i)] = estrangement_rate(df["close"], ta.SMA(df["close"],timeperiod=i)) #移動平均線乖離率
-        df["mom"+str(i)] = ta.MOM(df["close"],timeperiod=i)
+        #df["mom"+str(i)] = ta.MOM(df["close"],timeperiod=i)
         df["rsi"+str(i)] = ta.RSI(df["close"], timeperiod=i)
         df["atr"+str(i)] = ta.ATR(df["high"], df["low"], df["close"], timeperiod=i)
         df["ATRER"+str(i)] = estrangement_rate(df["close"], df["atr"+str(i)]) #ATR移動平均線乖離率
-        df["cmo"+str(i)] = ta.CMO(df["close"],timeperiod=i)
-        df["aroondown"+str(i)], df["aroonup"+str(i)] = ta.AROON(df["high"],df["low"],timeperiod=i)
-        df["mfi"+str(i)] = ta.MFI(df["high"],df["low"],df["close"],df["Volume "+COIN],timeperiod=i)
-        df["willr"+str(i)] = ta.WILLR(df["high"],df["low"],df["close"],timeperiod=i)
-        df["atr"+str(i)] = ta.ATR(df["high"], df["low"], df["close"], timeperiod=i)
+        #df["cmo"+str(i)] = ta.CMO(df["close"],timeperiod=i)
+        #df["aroondown"+str(i)], df["aroonup"+str(i)] = ta.AROON(df["high"],df["low"],timeperiod=i)
+        #df["mfi"+str(i)] = ta.MFI(df["high"],df["low"],df["close"],df["Volume "+COIN],timeperiod=i)
+        #df["willr"+str(i)] = ta.WILLR(df["high"],df["low"],df["close"],timeperiod=i)
         df["natr"+str(i)] = ta.NATR(df["high"], df["low"], df["close"], timeperiod=i)
         df["stddev"+str(i)] = ta.STDDEV(df["close"], timeperiod=i, nbdev=1)#標準偏差
         df["HL/STD"+str(i)] = df["high-low"] / df["stddev"+str(i)]#(高値-安値)/標準偏差
@@ -79,13 +78,13 @@ def make_feature(df, COIN):
     #    for i in f:
     #        df["ROCP_"+str(i)+clm] = ta.ROC(df[clm],timeperiod=i)
 
-    df.drop(["open","high","low"], axis=1, inplace=True)
+    #df.drop(["open","high","low"], axis=1, inplace=True)
     #return df.add_suffix("_"+COIN).reset_index(drop=True)
     return df.reset_index(drop=True)
 
 
 #up,stay,downの閾値とxを受け取りx分後のethのcloseの変化率を３値(2,1,0)に分類する
-def make_training_data(ed, x = 1, up = 0.0001, down = -0.0001):
+def make_training_data(ed, x, up, down):
     e_d = ed.to_dict() #dictionaryの方が早い
     #print(e_d)
     #print(e_d[100], " ", e_d[101], " ", (e_d[101] - e_d[100])/e_d[100])
@@ -115,6 +114,7 @@ def make_lag_feature(x,window_size):
     #name = x.columns.tolist()
     print("window_size: ",window_size)
     y = pd.DataFrame(x)
+
     for i in range(window_size):
         y = pd.concat(
             #"minute","hour","dayofweek"
@@ -122,10 +122,17 @@ def make_lag_feature(x,window_size):
             #[y, x.shift(i+1).add_suffix("_"+str(i+1))], #未来の情報を落とさないといけない
             axis=1
         )
-    #print(y.head())
         print("\r"+str(i+1)+" / "+str(window_size), end="")
-        
+
+    for i in range(10):
+        y = pd.concat(
+            [y, x["train"].shift(i+6).rename("train"+str(i+6))],
+            axis=1
+        )
+
+    #print(y.head(10))
     print("")
+    #sys.exit()
     return y
 
 
@@ -203,7 +210,8 @@ def main():
     #目的変数と説明変数の生成
     x = make_data(EUF,"ETH",mlater,threshold,window_size)
 
-
+    #print(x)
+    #x = x.tail(int(len(x)/3))
     #データの分割
     x_train, x_test, t_train, t_test = train_test_split(x.drop("train", axis=1), x["train"], test_size=0.05, random_state=0, shuffle=False)
     x_train, x_eval, t_train, t_eval = train_test_split(x_train, t_train, test_size=0.1, random_state=0, shuffle=False)
@@ -222,7 +230,7 @@ def main():
 
     params = {
         "task": "train",
-        "boosting": "rf",
+        #"boosting": "rf",
         "extra_trees": True,
         "objective": "multiclass",
         "num_class": 3,
@@ -237,12 +245,13 @@ def main():
         "feature_fraction": 1.0,
         "min_child_samples": 5,
         "num_iterations": 50,
-        "learning_rate": 0.01
+        "learning_rate": 0.1
     }
 
 
     best_params, tuning_history = dict(), list()
-    model_lgb = lgb.train(params=params,train_set=lgb_train,verbose_eval=10,valid_sets=lgb_eval,num_boost_round=1000)
+    cat_list = ["dayofweek","hour","minute"]
+    model_lgb = lgb.train(params=params,train_set=lgb_train,verbose_eval=10,valid_sets=lgb_eval,num_boost_round=1000,categorical_feature=cat_list)
     #Best Params: {'task': 'train', 'boosting': 'rf', 'extra_trees': True, 'objective': 'multiclass', 'num_class': 3, 
     # 'metric': 'multi_logloss', 'device': 'gpu', 'bagging_freq': 1, 'bagging_fraction': 0.9, 'feature_pre_filter': False, 
     # 'lambda_l1': 3.946722917499177e-05, 'lambda_l2': 4.6903285635226136e-07, 'num_leaves': 244, 'feature_fraction': 1.0,
@@ -280,6 +289,11 @@ def main():
     x_now = x.drop("train",axis=1)
     t_now = x["train"]
 
+    t_now_np = t_now.to_numpy()
+    u, counts = np.unique(t_now_np, return_counts=True)
+    print(u)      #0,     1,    2
+    print(counts) #[164008 169315 165253]
+
 
     ypred = best.predict(x_now,num_iteration=best.best_iteration)
     ypred = np.argmax(ypred,axis=1)
@@ -292,7 +306,7 @@ def main():
 
 mlater = 5 #何分後のup,downを予測するか
 threshold = 0.001 #閾値 #10 0.00125 #5 0.001
-window_size = 1 #ラグ特徴量はあったほうがいいacc0.5->0.75
+window_size = 0 #ラグ特徴量はあったほうがいいacc0.5->0.75
 
 
 #他のファイルから呼び出したとき実行しないようにするために書く

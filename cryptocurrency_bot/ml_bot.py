@@ -27,7 +27,8 @@ def now_predict(COIN):
     return ypred
 
 
-def now_order(y, COIN):
+def now_order(y, p, COIN):
+    print(y)
     #手持ちUSDTを取得
     balance = exchange.fetch_balance()["USDT"]["free"]
     print("今の手持ちUSDTは" + str(balance))
@@ -43,7 +44,7 @@ def now_order(y, COIN):
 
     bidorask = lambda a: "asks" if a == 2 else "bids"
     ob = exchange.fetch_order_book(COIN+"/USDT")[bidorask(y)][0][0] #bidsこの価格でなら買う(今より安い) #asksこの価格でなら売る(今より高い)
-    print(ob)
+    #print(ob)
 
     #注文
     side = lambda a: "buy" if a == 2 else "sell"
@@ -93,7 +94,7 @@ print(y)#0,1,2
 
 
 if y != 1:
-    order_id = now_order(y,"ETH")
+    order_id = now_order(y,ypred[0][y],"ETH")
 
 
 
