@@ -28,14 +28,14 @@ for i in range(32):
         #print(i, ": ", data.count(str(i)))
         hist_code1.loc[i] = [data.count(str(i)), data.count(str(i)) * 100 / frequency]
     
-
-print(hist_code1["frequency"])
+add0 = lambda i: "0"+str(i) if i < 10 else str(i)
+print(hist_code1["frequency"].sort_values(ascending=False))
 
 
 #連続した文字列の取得
 
 # hist_code3 = pd.DataFrame(columns=["index", "count"])
-# add0 = lambda i: "0"+str(i) if i < 10 else str(i)
+## add0 = lambda i: "0"+str(i) if i < 10 else str(i)
 
 # h = 0
 # for i in range(32):
@@ -51,51 +51,43 @@ print(hist_code1["frequency"])
 # hist3.to_csv(os.getcwd() + "\decryption_homophonic_cipher/three_text.csv")
 
 def trans(i):
-    # if i == "12" or i == "31": #7.407407 + 5.882353
-    #     i = "T "
-    # elif i == "28": #4.357298
-    #     i = "H "
-    # elif i == "18" or i == "26": #5.664488 + 5/4.357298 or 26/6.100218
-    #     i = "E "        #ここまでは合ってる前提
-    # elif i == "30" or i == "24":
-    #     i = "R "
 
-    # elif i == "21":
-    #     i = "I "
-    # elif i == "07":
-    #     i = "N "
-
-    # elif i == "01" or i == "05":
-    #     i = "A "
-    # elif i == "16":
-    #     i = "S "
-
-    if i == "12" or i == "31":
+    if i == "12" or i == "31":#7.407407 + 5.882353 = 13.28976
         i = "T "
-    elif i == "28":
+    elif i == "28":#4.357298 低い?
         i = "H "
-    elif i == "18" or i == "26":
+    elif i == "18" or i == "26":#5.664488 + 6.100218 = 11.764706
         i = "E "
-    elif i == "30":
-        i = "R "
-
-    elif i == "05":#怪しい
-        i = "I "
-    elif i == "07" or i == "08":
-        i = "N "
-    elif i == "14":
-        i = "G "
-
-    elif i == "19" or i == "21":
+    elif i == "01" or i == "05":#4.357298 + 4.357298 = 8.714596
         i = "A "
-    elif i == "24":
+    elif i == "21":#7.625272
+        i = "I "
+
+    elif i == "07" or i == "25":#3.485839 + 3.267974 = 6.753813  #どちらかが正しい -> こちらが正しい
+        i = "N "
+    elif i == "00":#1.089325
+        i = "G " 
+    elif i == "04":
         i = "D "
     
+    # elif i == "24":#どちらかが正しい
+    #     i = "S "
+    # elif i == "19":
+    #     i = "W "
+    # elif i == "08":#どちらかが正しい
+    #     i = "S "
+    # elif i == "13":
+    #     i = "W "
 
-
-    return i
     
 
+
+
+    
+    return i
+    
+already = ["12","31","28","18","26","01","05","21","07","25","00","04"]
+low = ["03","11","16","06","09","13"]
 
 def decryption(df, t):
     df = df.query("count >= "+str(t))
@@ -107,24 +99,46 @@ def decryption(df, t):
         #print(i[3])#count
     print(" ")
 
+# hist = pd.DataFrame(columns=["frequency"])
+# c = 0
+# for i, j in hist_code1.iterrows():
+#     #print(str(i) + " " + str(j))
+
+#     i = trans(add0(i))
+#     hist.loc[str(i)] = j
+
+# print(hist["frequency"].sort_values(ascending=False))
+
 twotext = pd.read_csv(os.getcwd() + r"\decryption_homophonic_cipher/two_text.csv")
 threetext = pd.read_csv(os.getcwd() + r"\decryption_homophonic_cipher/three_text.csv")
 
-decryption(twotext, 2)
+decryption(twotext, 3)
 decryption(threetext, 2)
+
 
 
 df = threetext.query("count >= "+str(1))
 for j in df.itertuples():
     for i in range(len(j[2].split())-2):
-        if j[2].split()[i] != "05" and (j[2].split()[i+1] == "07" or j[2].split()[i+1] == "08") and j[2].split()[i+2] != "14" and j[2].split()[i+2] == "24":
-        #if j[2].split()[i] == "05" and (j[2].split()[i+2] == "04"): #or j[2].split()[i+2] == "07"):
-            print(str(j[2].split()[i]) + " " + str(j[2].split()[i+1]) + " " + str(j[2].split()[i+2]), end=" ")
+        #if j[2].split()[i] != "05" and (j[2].split()[i+1] == "07" or j[2].split()[i+1] == "08") and j[2].split()[i+2] != "14" and j[2].split()[i+2] == "24":
+        #if j[2].split()[i+0] not in already and (j[2].split()[i+1] == "01" or j[2].split()[i+1] == "05") and (j[2].split()[i+2] == "08" or j[2].split()[i+2] == "24"):
+        #if j[2].split()[i+0] == "28" and (j[2].split()[i+1] == "18" or j[2].split()[i+1] == "26"):
+        if j[2].split()[i+0] =="16" or j[2].split()[i+1] =="16" or j[2].split()[i+2] =="16":
+            print(trans(str(j[2].split()[i])) + " " + trans(str(j[2].split()[i+1])) + " " + trans(str(j[2].split()[i+2])), end=" ")
             print("  " + str(j[3]))#index
         #print(j[2].split()[i], end=" ")#index
     #print("  " + str(j[3]))#index
     #print(i[3])#count
 print(" ")
+
+# O = ["08","17","27","29"]
+# df2 = twotext.query("count >= "+str(1))
+# for j in df2.itertuples():
+#     for i in range(len(j[2].split())-1):
+#         if j[2].split()[i+0] in O:
+#             print(trans(str(j[2].split()[i])) + " " + trans(str(j[2].split()[i+1])), end=" ")
+#             print("  " + str(j[3]))#index
+# print(" ")
 
 
 #暗号文の出力
