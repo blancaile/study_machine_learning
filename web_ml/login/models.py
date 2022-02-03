@@ -9,10 +9,10 @@ class UserManager(BaseUserManager):
     def create_user(self,username,api_key,secret_key,password=None):
         if not username:
             raise ValueError("ユーザー名は必須です")
-        if not api_key:
-            raise ValueError("API KEYは必須です")
-        if not secret_key:
-            raise ValueError("SECRET API KEYは必須です")
+        # if not api_key:
+        #     raise ValueError("API KEYは必須です")
+        # if not secret_key:
+        #     raise ValueError("SECRET API KEYは必須です")
 
         user = self.model(
             username = username,
