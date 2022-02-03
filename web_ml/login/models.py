@@ -5,6 +5,7 @@ from CryptographicFields import fields
 
 
 class UserManager(BaseUserManager):
+    #use_in_migrations = True
     def create_user(self,username,api_key,secret_key,password=None):
         if not username:
             raise ValueError("ユーザー名は必須です")

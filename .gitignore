@@ -1,2 +1,8 @@
 django_study/mysite/mysite/local_settings.py
 decryption_homophonic_cipher/homophonic.txt
+ml_web/ml_web/settings.py
+cryptocurrency_bot/binance_api_key.txt
+cryptocurrency_bot/get_data.py
+ml_web_2/settings.py
+web_app/web_app/settings.py
+web_ml/web_ml/settings.py
