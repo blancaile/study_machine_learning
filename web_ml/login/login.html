@@ -1,0 +1,30 @@
+<html lang="ja" dir="ltr">
+<head>
+<meta charset="utf-8">
+<title></title>
+
+</head>
+<body>
+<h1>ログイン画面</h1>
+
+<div class="reg">
+  <form method="post" action="{% url 'signup' %}">
+    {% csrf_token %}
+
+    <table class="reg_form">
+    <tr>
+    <td><label for="username">ユーザーID:</label></td>
+    <td><input type="text" name="username"></td>
+    <td><label for="password">パスワード：</label></td>
+    <td><input type="password" name="password"></td>
+    </tr>
+    </table>
+
+    <input type="submit" class="btn" value="Login">
+ </form>
+</div>
+   <p class="message">アカウントをお持ちですか？：
+   <a href="{% url 'create' %}">アカウントを作成</a>
+   </p>
+</body>
+</html>

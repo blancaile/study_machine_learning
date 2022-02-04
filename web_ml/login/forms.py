@@ -7,7 +7,7 @@ import imp
 #     class Meta(UserCreationForm.Meta):
 #         model   = models.CustomUser
 #         fields  = ("username","password","api_key","secret_key") #ここにパスワードを書くと被る
-
+from django.contrib.auth.forms import UserCreationForm
 from django import forms
 from . import models
 
