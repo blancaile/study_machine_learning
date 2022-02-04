@@ -31,7 +31,71 @@ for i in range(32):
 add0 = lambda i: "0"+str(i) if i < 10 else str(i)
 #print(hist_code1["frequency"].sort_values(ascending=False))
 
+for i in dfdata:
+    if i =="01" or i=="05":#A
+        i = "A"
+    elif i == "12" or i =="31":
+        i="B"
+    elif i =="18" or i=="26":#E
+        i="C"
+    elif i=="07" or i =="25":
+        i="D"
+    elif i=="24" or i=="10":#R
+        i="E"
+    elif i=="30" or i=="20":#O
+        i="F"
 
+      # elif i == "08":#どちらかが正しい
+    #     i = "S "
+    # elif i == "24" or i == "10":
+    #     i = "R "
+    # elif i == "30" or i=="20":
+    #     i = "O "
+    
+
+
+    elif i=="02":
+        i="G"
+    elif i=="03":
+        i="H"
+    elif i=="04":
+        i="I"
+    elif i=="06":
+        i="J"
+    elif i=="09":
+        i="K"
+    elif i=="11":
+        i="L"
+    elif i=="13":
+        i="M"
+    elif i=="14":
+        i="N"
+    elif i=="15":
+        i="O"
+    elif i=="16":
+        i="P"
+    elif i=="17":
+        i="Q"
+    elif i=="19":
+        i="R"
+    elif i=="22":
+        i="S"
+    elif i=="23":
+        i="T"
+    elif i=="27":
+        i="U"
+    elif i=="28":
+        i="V"
+    elif i=="29":
+        i="W"
+    elif i=="00":
+        i="X"
+    elif i=="21":
+        i="Y"
+    elif i=="08":
+        i="Z"
+    print(i,end="")
+print(" ")
 #連続した文字列の取得
 
 # hist_code3 = pd.DataFrame(columns=["index", "count"])
@@ -70,28 +134,29 @@ def trans(i):
     elif i == "04":
         i = "D "
 
-    # elif i == "24":#どちらかが正しい
+    elif i == "24":#どちらかが正しい
+        i = "S "
+    elif i == "08" or i == "20":
+        i = "R "
+    # elif i == "30" or i=="10":#消去法
+    #     i = "O "
+
+    elif i =="29" or i =="30":
+        i="O "
+
+
+    # elif i == "08":#どちらかが正しい
     #     i = "S "
-    # elif i == "19":
-    #     i = "W "
-    # elif i == "08" or i == "20":
+    # elif i == "24" or i == "10":
     #     i = "R "
-    # elif i == "30":#消去法
+    # elif i == "30" or i=="20":
     #     i = "O "
 
 
-    elif i == "08":#どちらかが正しい
-        i = "S "
-    elif i == "13":
-        i = "W "
-    elif i == "24" or i == "10":
-        i = "R "
-    elif i == "30":
-        i = "O "
     
     return i
                                                                         #HER
-already = ["12","31","28","18","26","01","05","21","07","25","00","04","24","19","08","20"]
+already = ["12","31","28","18","26","01","05","21","07","25","00","04","24","08","20"]
 low = ["03","11","16","06","09","13"]
 
 def decryption(df, t):
@@ -126,7 +191,8 @@ df = threetext.query("count >= "+str(1))
 for j in df.itertuples():
     for i in range(len(j[2].split())-2):
         #if (j[2].split()[i+0] == "01" or j[2].split()[i+0] == "05") and (j[2].split()[i+1] == "01" or j[2].split()[i+1] == "05") and (j[2].split()[i+0] == "01" or j[2].split()[i+0] == "05") and j[2].split()[i+1] not in already and j[2].split()[i+2] not in already :
-        if (j[2].split()[i+2] =="08" or j[2].split()[i+2] =="20") and j[2].split()[i+1] == "30":
+        #if (j[2].split()[i+2] =="01" or j[2].split()[i+2] =="05") and j[2].split()[i+0] == "12":
+        if (j[2].split()[i+0] =="18" or j[2].split()[i+0] =="28") and j[2].split()[i+2] =="24":
             print(trans(str(j[2].split()[i])) + " " + trans(str(j[2].split()[i+1])) + " " + trans(str(j[2].split()[i+2])), end=" ")
             print("  " + str(j[3]))#index
         #print(j[2].split()[i], end=" ")#index

@@ -6,3 +6,4 @@ cryptocurrency_bot/get_data.py
 ml_web_2/settings.py
 web_app/web_app/settings.py
 web_ml/web_ml/settings.py
+web_ml/db.sqlite3
