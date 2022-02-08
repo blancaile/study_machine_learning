@@ -22,19 +22,20 @@ def encrypt(data,password):
     BLOCK_SIZE = 16
     data = data.encode("utf-8")
     data = base64.b64encode(data)
-    data = aes.encrypt(pad(data,BLOCK_SIZE))
+    data = aes.encrypt(pad(data,BLOCK_SIZE)) #<class 'bytes'>
+    #print(type(data))
     return data
         
 def decrypt(data,password):
     K = hashlib.sha1(str(password).encode("utf-8")).hexdigest()
     Key = bytes.fromhex(K[:32])
     aes = AES.new(Key, AES.MODE_ECB)
-
-    data = aes.decrypt(data)
+    data = aes.decrypt(data)#error
     data = base64.b64decode(data)
     data = data.decode("utf-8")
     return data
 
+#アカウント登録
 def create(request):
     if(request.method == "GET"):
         model = models.CustomUser()
@@ -48,7 +49,11 @@ def create(request):
         api_key = request.POST["api_key"]
         secret_key = request.POST["secret_key"]
        
-        api_key = encrypt(api_key, password)
+        api_key = encrypt(api_key, password)#apiKey type is  <class 'bytes'>
+        print("apiKey type is ", type(api_key))
+        print(api_key)
+        #api_key = api_key.decode("utf-8")#error
+        #print("2apiKey type is ", type(api_key))
         secret_key = encrypt(secret_key, password)
 
         user = models.CustomUser(username = username,password=password,
@@ -63,21 +68,24 @@ def temp(request):
     return redirect(to="signup")
 
 
-#def index(LoginRequiredMixin,request):
+#ホーム画面
 @login_required
 def index(request):
-    #print("request is ", request.user) #urlがリクエストされてる？
-    #print("request is ", request.user.password)
-    params = {"username":request.user.username,}
+    user = models.CustomUser.objects.get(username=request.user.username)
+    params = {"username":request.user.username,
+    #"api_key":decrypt(user.api_key, user.password),#user.passwordはハッシュ値，だからdecryptに失敗した．
+    #"secret_key":decrypt(user.secret_key, user.password),
+    }
     return render(request, "login/home.html",context=params)
 
+#ログイン
 def signup(request):
     if request.method == "POST":
         id = request.POST.get("username")
         password = request.POST.get("password")
 
         user = authenticate(request,username=id, password=password)
-        print(id, password, user)
+        #print(id, password, user)
         if user:
             if user.is_active:
                 login(request,user)#ここでエラー
@@ -89,16 +97,7 @@ def signup(request):
     else:
         return render(request,"login/login.html")
 
-    #     form = UserCreationForm(request.POST)
-    #     if form.is_valid():
-    #         user = form.save()
-    #         login(request,user)
-    #         return redirect("index/")
-    # else:
-    #     form = UserCreationForm()
-
-    # return render(request, "login/login.html",{"form":form})
-
+#ログアウト
 @login_required
 def Logout(request):
     logout(request)

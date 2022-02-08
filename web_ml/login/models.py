@@ -38,8 +38,8 @@ class UserManager(BaseUserManager):
 class CustomUser(AbstractBaseUser):
     username = models.CharField(verbose_name="username",max_length=50,unique=True)
     password = models.CharField(verbose_name="password",max_length=50)
-    api_key = fields.CharField(verbose_name="api_key",max_length=100)
-    secret_key = fields.CharField(verbose_name="secret_key",max_length=100)
+    api_key = fields.BinaryField(verbose_name="api_key",max_length=500)
+    secret_key = fields.BinaryField(verbose_name="secret_key",max_length=500)
     is_active = models.BooleanField(default=True)
     is_admin = models.BooleanField(default=False)
 
