@@ -43,15 +43,15 @@ def create(request):
         return render(request, "login/create.html",{"form":form, "model":model})
     
     elif(request.method == "POST"):
-        print(request)
+        #print(request)
         username = request.POST["username"]
         password = request.POST["password"] #なぜかパスワードが存在しない
         api_key = request.POST["api_key"]
         secret_key = request.POST["secret_key"]
        
         api_key = encrypt(api_key, password)#apiKey type is  <class 'bytes'>
-        print("apiKey type is ", type(api_key))
-        print(api_key)
+        #print("apiKey type is ", type(api_key))
+        #print(api_key)
         #api_key = api_key.decode("utf-8")#error
         #print("2apiKey type is ", type(api_key))
         secret_key = encrypt(secret_key, password)
@@ -66,7 +66,6 @@ def create(request):
 
 def temp(request):
     return redirect(to="signup")
-
 
 #ホーム画面
 @login_required

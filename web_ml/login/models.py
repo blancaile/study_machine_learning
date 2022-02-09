@@ -23,7 +23,7 @@ class UserManager(BaseUserManager):
         user.save(using=self._db)
         return user
 
-    def create_superuser(self,username,api_key,secret_key,password=None):
+    def create_superuser(self,username,api_key=b"dummy",secret_key=b"dummy",password=None):
         user = self.create_user(
             username=username,
             password=password,
@@ -37,9 +37,9 @@ class UserManager(BaseUserManager):
 
 class CustomUser(AbstractBaseUser):
     username = models.CharField(verbose_name="username",max_length=50,unique=True)
-    password = models.CharField(verbose_name="password",max_length=50)
-    api_key = fields.BinaryField(verbose_name="api_key",max_length=500)
-    secret_key = fields.BinaryField(verbose_name="secret_key",max_length=500)
+    password = models.CharField(verbose_name="password",max_length=100)
+    api_key = models.BinaryField(verbose_name="api_key",max_length=500)#fieldsだとエラー
+    secret_key = models.BinaryField(verbose_name="secret_key",max_length=500)#BinaryFieldはadmin pageで見ることができない
     is_active = models.BooleanField(default=True)
     is_admin = models.BooleanField(default=False)
 
