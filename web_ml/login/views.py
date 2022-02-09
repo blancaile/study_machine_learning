@@ -71,11 +71,17 @@ def temp(request):
 @login_required
 def index(request):
     user = models.CustomUser.objects.get(username=request.user.username)
+    if request.POST.get("password"):
+        params = {"username": request.user.username,
+        "api_key": decrypt(user.api_key, request.POST.get("password")),
+        "secret_key": decrypt(user.secret_key, request.POST.get("password")),
+        }
+        return render(request, "login/home.html",context=params)
+
     params = {"username":request.user.username,
-    #"api_key":decrypt(user.api_key, user.password),#user.passwordはハッシュ値，だからdecryptに失敗した．
-    #"secret_key":decrypt(user.secret_key, user.password),
     }
     return render(request, "login/home.html",context=params)
+
 
 #ログイン
 def signup(request):
