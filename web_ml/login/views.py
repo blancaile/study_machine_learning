@@ -72,14 +72,20 @@ def temp(request):
 def index(request):
     user = models.CustomUser.objects.get(username=request.user.username)
     if request.POST.get("password"):
-        params = {"username": request.user.username,
-        "api_key": decrypt(user.api_key, request.POST.get("password")),
-        "secret_key": decrypt(user.secret_key, request.POST.get("password")),
-        }
-        return render(request, "login/home.html",context=params)
+        #ここでパスワードチェックを入れる
+        password_check = authenticate(request, username=user.username, password=request.POST.get("password"))
+        if password_check:
+            params = {"username": request.user.username,
+            "api_key": decrypt(user.api_key, request.POST.get("password")),
+            "secret_key": decrypt(user.secret_key, request.POST.get("password")),
+            }
+            return render(request, "login/home.html",context=params)
+        else:
+            return HttpResponse("パスワードが間違っています")
 
     params = {"username":request.user.username,
     }
+    
     return render(request, "login/home.html",context=params)
 
 
