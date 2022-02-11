@@ -12,6 +12,12 @@ from Crypto.Cipher import AES
 import hashlib
 import base64
 from Crypto.Util.Padding import pad, unpad
+
+#import cryptocurrency_bot.ml_bot as ml
+import sys
+sys.path.append("../cryptocurrency_bot/")
+import ml_bot
+#import cryptocurrency_bot
 # Create your views here.
 
 def encrypt(data,password):
@@ -71,15 +77,18 @@ def temp(request):
 @login_required
 def index(request):
     user = models.CustomUser.objects.get(username=request.user.username)
+    #model = models.CustomUser()
+    #form = forms.ApplyForm()
     if request.POST.get("password"):
         #ここでパスワードチェックを入れる
         password_check = authenticate(request, username=user.username, password=request.POST.get("password"))
         if password_check:
-            params = {"username": request.user.username,
-            "api_key": decrypt(user.api_key, request.POST.get("password")),
-            "secret_key": decrypt(user.secret_key, request.POST.get("password")),
-            }
-            return render(request, "login/home.html",context=params)
+            # params = {"username": request.user.username,
+            # "api_key": decrypt(user.api_key, request.POST.get("password")),
+            # "secret_key": decrypt(user.secret_key, request.POST.get("password")),
+            # }
+            # return render(request, "login/home.html",context=params)
+            ml_bot.order(apikey=decrypt(user.api_key, request.POST.get("password")), secretkey=decrypt(user.secret_key, request.POST.get("password")))
         else:
             return HttpResponse("パスワードが間違っています")
 

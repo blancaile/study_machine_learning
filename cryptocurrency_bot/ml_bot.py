@@ -20,14 +20,16 @@ def now_predict(COIN):
     x = mm.make_lag_feature(x, mm.window_size)
     x_now = x.tail(1).drop(["train"], axis=1)
     #print(x_now.isnull().values.sum()) #NaNカウント
-
-    best = lgb.Booster(model_file=os.getcwd() +r"\cryptocurrency_bot\model.txt")
+    if __name__ == "__main__":
+        best = lgb.Booster(model_file=os.getcwd() +r"\cryptocurrency_bot\model.txt")
+    else:
+        best = lgb.Booster(model_file=os.getcwd() +r"\..\cryptocurrency_bot\model.txt")
     ypred = best.predict(x_now,num_iteration=best.best_iteration)
 
     return ypred
 
 
-def now_order(y, p, COIN):
+def now_order(exchange, y, p, COIN):
     print(y)
     #手持ちUSDTを取得
     balance = exchange.fetch_balance()["USDT"]["free"]
@@ -60,41 +62,23 @@ def now_order(y, p, COIN):
     return order["id"]
 
 
-
-#key読み込み
-apikey = ""
-secretkey = ""
-with open(os.getcwd() + r"\cryptocurrency_bot\binance_api_key.txt","r") as f:
-    for line in f:
-        data = line.strip().split("=")
-        if data[0] == "api_key":
-            apikey = data[1]
-        elif data[0] == "secret_key":
-            secretkey = data[1]
-f.close()
+def order(apikey, secretkey):
+    exchange = ccxt.binanceusdm({
+        "apiKey": apikey,
+        "secret": secretkey,
+    })
 
 
+    #モデルで予測
+    ypred = now_predict("ETH")
+    #[[0.3230353  0.36189054 0.31507416]]
+    print("ypred is ", ypred)
+    y = np.argmax(ypred,axis=1)[0]
+    print("0,1,2 is", y)#0,1,2
+    print(ypred[0][y]) #一番高い予測の確率表示
 
-exchange = ccxt.binanceusdm({
-    "apiKey": apikey,
-    "secret": secretkey,
-})
-
-
-
-#モデルで予測
-
-ypred = now_predict("ETH")
-#[[0.3230353  0.36189054 0.31507416]]
-print(ypred)
-y = np.argmax(ypred,axis=1)[0]
-print(y)#0,1,2
-
-#print(ypred[0][y]) #一番高い予測の確率表示
-
-
-if y != 1:
-    order_id = now_order(y,ypred[0][y],"ETH")
+    if y != 1:
+        order_id = now_order(exchange, y, ypred[0][y], "ETH")
 
 
 
@@ -105,3 +89,25 @@ if y != 1:
 # x分後になったら注文を閉じる
 # }
 
+
+
+
+def main():
+    #key読み込み
+    apikey = ""
+    secretkey = ""
+    with open(os.getcwd() + r"\cryptocurrency_bot\binance_api_key.txt","r") as f:
+        for line in f:
+            data = line.strip().split("=")
+            if data[0] == "api_key":
+                apikey = data[1]
+            elif data[0] == "secret_key":
+                secretkey = data[1]
+    f.close()
+
+    order(apikey, secretkey)
+
+
+#他のファイルから呼び出したとき実行しないようにするために書く
+if __name__ == "__main__":
+    main()
