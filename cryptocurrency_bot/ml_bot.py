@@ -9,6 +9,40 @@ import make_model_lightgbm as mm
 import pandas as pd
 import numpy as np
 import time
+from retry import retry
+
+@retry(delay=1,backoff=2)
+def create_order(exchange, symbol, type, side, amount, price, params = {}):#注文を出す
+    order = exchange.create_order( #stop limit: side=buyのときは高く設定，sellは低く設定
+        symbol = symbol,
+        type = type,
+        side = side,
+        amount = amount,
+        price = price,
+        params = params
+    )
+    return order
+
+@retry(delay=1,backoff=2)
+def fetch_order_book(exchange, COIN, bidorask):#COINの価格を取得
+    ob = exchange.fetch_order_book(COIN+"/USDT")[bidorask][0][0] #bidsこの価格でなら買う(今より安い) #asksこの価格でなら売る(今より高い)
+    return ob
+
+@retry(delay=1,backoff=2)
+def fetch_balance(exchange):#手持ちのUSDTを取得
+    balance = exchange.fetch_balance()["USDT"]["free"]
+    return balance
+
+@retry(delay=1,backoff=2)
+def fetch_my_trades(exchange, COIN):#取引履歴を取得
+    trades = exchange.fetch_my_trades(symbol = COIN + "/USDT")
+    return trades
+
+@retry(delay=1,backoff=2)
+def cancel_order(exchange, id, COIN):#注文をキャンセルする
+    c_order = exchange.cancel_order(id,symbol= COIN + "/USDT")#既にした注文をキャンセル
+    return c_order
+
 
 def now_predict(COIN):
     day = 60*60*2 #1日前までのチャートを取得
@@ -28,11 +62,13 @@ def now_predict(COIN):
 
     return ypred
 
+
     #p:yの確率
 def now_order(exchange, y, p, COIN):
     print(y)
     #手持ちUSDTを取得
-    balance = exchange.fetch_balance()["USDT"]["free"]
+    #balance = exchange.fetch_balance()["USDT"]["free"] #errorhandling未対応
+    balance = fetch_balance(exchange)
     print("今の手持ちUSDTは" + str(balance))
 
 
@@ -49,11 +85,14 @@ def now_order(exchange, y, p, COIN):
 
 
     #現在ETH/USDT価格を取得
-    #ticker = exchange.fetch_ticker(COIN+"/USDT")["last"]
+    #ticker = exchange.fetch_ticker(COIN+"/USDT")["last"] 
     #print(ticker)
 
     bidorask = lambda a: "asks" if a == 2 else "bids"
-    ob = exchange.fetch_order_book(COIN+"/USDT")[bidorask(y)][0][0] #bidsこの価格でなら買う(今より安い) #asksこの価格でなら売る(今より高い)
+
+    #errorhandling未対応
+    # ob = exchange.fetch_order_book(COIN+"/USDT")[bidorask(y)][0][0] #bidsこの価格でなら買う(今より安い) #asksこの価格でなら売る(今より高い)
+    ob = fetch_order_book(exchange, COIN, bidorask(y))
     print(ob)
 
     #注文
@@ -62,26 +101,21 @@ def now_order(exchange, y, p, COIN):
 
     
     side = lambda a: "buy" if a == 2 else "sell"
-    order = exchange.create_order( #stop limit: side=buyのときは高く設定，sellは低く設定
-        symbol = COIN+"/USDT",
-        type = "limit",
-        side = side(y),
-        amount = price/ob,#最小は0.002ETH
-        price = ob, #指値価格
-    )
+
+    #errorhandling未対応
+    # order = exchange.create_order( #stop limit: side=buyのときは高く設定，sellは低く設定
+    #     symbol = COIN+"/USDT",
+    #     type = "limit",
+    #     side = side(y),
+    #     amount = price/ob,#最小は0.002ETH
+    #     price = price/ob, #指値価格
+    # )
+
+    order = create_order(exchange, COIN+"/USDT", "limit", side(y), price/ob, ob, {})
 
     print(order)
-    #{'info': {'orderId': '8389765515854567594', 
-        # 'symbol': 'ETHUSDT', 'status': 'FILLED', 'clientOrderId': 'x-xcKtGhcuf7ab5040b1761dc971214c',
-        # 'price': '2920.82', 'avgPrice': '2920.82000', 'origQty': '0.004', 'executedQty': '0.004', 
-        # 'cumQty': '0.004', 'cumQuote': '11.68328', 'timeInForce': 'GTC', 'type': 'LIMIT', 'reduceOnly': False, 'closePosition': False, 
-        # 'side': 'BUY', 'positionSide': 'BOTH', 'stopPrice': '0', 'workingType': 'CONTRACT_PRICE', 'priceProtect': False, 'origType': 'LIMIT', 
-        # 'updateTime': '1644735869453'}, 
-        # 'id': '8389765515854567594', 'clientOrderId': 'x-xcKtGhcuf7ab5040b1761dc971214c', 'timestamp': None, 
-        # 'datetime': None, 'lastTradeTimestamp': None, 'symbol': 'ETH/USDT', 'type': 'limit', 'timeInForce': 'GTC', 'postOnly': False, 'side': 'buy', 
-        # 'price': 2920.82, 'stopPrice': None, 'amount': 0.004, 'cost': 11.68328, 'average': 2920.82, 'filled': 0.004, 'remaining': 0.0, 'status': 'closed', 
-        # 'fee': None, 'trades': [], 'fees': []}
     return order#["id"]
+
 
 #予測と実行
 def order(apikey, secretkey):
@@ -114,7 +148,8 @@ def order(apikey, secretkey):
         elif y != 1:
             order = now_order(exchange, y, ypred[0][y], "ETH")
             sleep(1)
-            trades = exchange.fetch_my_trades(symbol="ETH/USDT")
+            #trades = exchange.fetch_my_trades(symbol="ETH/USDT") #errorhandling未対応
+            trades = fetch_my_trades(exchange, "ETH")
             print(" ")
             print(trades[-1])
             #trades = exchange.fetch_order_trades(order["id"],symbol="ETH/USDT")#fetch order trades はspot only
@@ -124,41 +159,47 @@ def order(apikey, secretkey):
                 si = lambda a: "buy" if a == "sell" else "sell"#side逆転
                 ch = lambda a: 1 if a == "buy" else -1#buyなら1,sellなら-1
 
-                close_position = exchange.create_order( #指値注文
-                    symbol = trades[-1]["symbol"],
-                    type = "limit",
-                    side = si(trades[-1]["side"]),
-                    amount = trades[-1]["amount"],
-                    price = trades[-1]["price"] + 10 * ch(trades[-1]["side"]),
-                    params = {"reduceOnly": True},#ポジションから注文する
-                )
+                # close_position = exchange.create_order( #指値注文
+                #     symbol = trades[-1]["symbol"],
+                #     type = "limit",
+                #     side = si(trades[-1]["side"]),
+                #     amount = trades[-1]["amount"],
+                #     price = trades[-1]["price"] + 10 * ch(trades[-1]["side"]),
+                #     params = {"reduceOnly": True},#ポジションから注文する
+                # )
+                close_position = create_order(exchange, trades[-1]["symbol"], "limit", si(trades[-1]["side"]), trades[-1]["amount"], trades[-1]["price"] + 10 * ch(trades[-1]["side"]), {"reduceOnly": True})
 
                 #nowtime = int(time.time())
                 while(True):#通った注文が存在する間1秒おきにチェックする
                     sleep(1)
                     nowtime = int(time.time())
                     flag = False
-                    if mm.mlater * 60< nowtime - trades[-1]["timestamp"] // 1000: #規定時間になったら
+                    if mm.mlater * 60<= nowtime - trades[-1]["timestamp"] // 1000: #規定時間になったら
                         print(mm.mlater, "分経過")
-                        while(True):#注文を閉じるまでトライ
-                            exchange.cancel_order(close_position["id"],symbol="ETH/USDT")#既にした注文をキャンセル
+                        while(True):#注文を閉じるまでトライ 
+                            #exchange.cancel_order(close_position["id"],symbol="ETH/USDT")#既にした注文をキャンセル #errorhandling未対応
+                            c_order = cancel_order(exchange, close_position["id"], "ETH")
                             print('キャンセル成功')
 
                             #noweth = exchange.fetch_ticker(symbol="ETH/USDT")
                             bidorask = lambda a: "bids" if a == 2 else "asks"
-                            noweth = exchange.fetch_order_book("ETH/USDT")[bidorask(y)][0][0] #bidsこの価格でなら買う(今より安い) #asksこの価格でなら売る(今より高い)
+                            #noweth = exchange.fetch_order_book("ETH/USDT")[bidorask(y)][0][0] #bidsこの価格でなら買う(今より安い) #asksこの価格でなら売る(今より高い) #errorhandling未対応
+                            noweth = fetch_order_book(exchange, "ETH", bidorask(y))
                             print("now eth price is ", noweth)
 
-                            fin_position = exchange.create_order( #指値注文
-                                symbol = trades[-1]["symbol"],
-                                type = "limit",
-                                side = si(trades[-1]["side"]),
-                                amount = trades[-1]["amount"],
-                                price = noweth,#今の価格に変更
-                                params = {"reduceOnly": True},#ポジションから注文する
-                            )
+                            # fin_position = exchange.create_order( #指値注文
+                            #     symbol = trades[-1]["symbol"],
+                            #     type = "limit",
+                            #     side = si(trades[-1]["side"]),
+                            #     amount = trades[-1]["amount"],
+                            #     price = noweth,#今の価格に変更
+                            #     params = {"reduceOnly": True},#ポジションから注文する
+                            # )
+
+                            fin_position = create_order(exchange, trades[-1]["symbol"], "limit", si(trades[-1]["side"]), trades[-1]["amount"], noweth, {"reduceOnly": True})
                             sleep(1)
-                            ftrades = exchange.fetch_my_trades(symbol="ETH/USDT")
+                            #ftrades = exchange.fetch_my_trades(symbol="ETH/USDT")#errorhandling未対応
+                            ftrades = fetch_my_trades(exchange, "ETH")
                             if fin_position["id"] == ftrades[-1]["order"]:#close注文が通ったらbreak
                                 flag = True
                                 print("ポジションclose成功")
@@ -172,21 +213,16 @@ def order(apikey, secretkey):
             elif trades[-1]["order"] != order["id"]: #注文が通らなかったら
                 print("elifになった")
                 #if オーダーが存在するときにしないとエラーになる
-                exchange.cancel_order(order["id"],symbol="ETH/USDT")#注文キャンセル
+                #exchange.cancel_order(order["id"],symbol="ETH/USDT")#注文キャンセル
+                c_order = cancel_order(exchange, order["id"], "ETH")
             else:
                 print("elseになった")
                 #if オーダーが存在するときにしないとエラーになる
-                exchange.cancel_order(order["id"],symbol="ETH/USDT")
+                #exchange.cancel_order(order["id"],symbol="ETH/USDT")
+                c_order = cancel_order(exchange, order["id"], "ETH")
 
 
-            #注文が通ったら
-            #pm = lambda a: -1 if a == 2 else 1
-            # if order:
-            #     break
-                #損切りも実装する
-                # nowprice = exchange.fetch_ticker(symbol="ETH/USDT")#現在価格取得
-                # if nowprice/order[""]
-                #mm.mlater
+
 
 
 def main():
