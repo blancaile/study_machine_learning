@@ -8,4 +8,6 @@ urlpatterns = [
     path("logout/",views.Logout,name="Logout"),
     path("create/",views.create, name="create"),
     path("home/",views.index, name="index"),
+    path("exetrue/",views.exetrue, name="exetrue"),
+    path("exefalse/",views.exefalse, name="exefalse"),
 ]

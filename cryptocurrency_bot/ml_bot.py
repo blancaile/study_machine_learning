@@ -5,11 +5,16 @@ import os
 from dateutil.tz import UTC
 import lightgbm as lgb
 from matplotlib.pyplot import axis
+from login import views
 import make_model_lightgbm as mm
 import pandas as pd
 import numpy as np
 import time
 from retry import retry
+
+import sys
+sys.path.append("./web_ml/")
+from login import *
 
 
 @retry(tries=5,delay=1,backoff=2)
@@ -38,17 +43,20 @@ def fetch_balance(exchange):#手持ちのUSDTを取得
 def fetch_my_trades(exchange, COIN):#取引履歴を取得
     try:
         trades = exchange.fetch_my_trades(symbol = COIN + "/USDT")
+        return trades
     except ccxt.ExchangeError:
         pass
-    return trades
+    return None
 
 @retry(tries=5,delay=1,backoff=2)#キャンセルできる注文が存在しない場合->無視して続行する
 def cancel_order(exchange, id, COIN):#注文をキャンセルする
     try:
         c_order = exchange.cancel_order(id,symbol= COIN + "/USDT")#既にした注文をキャンセル
+        return c_order
     except ccxt.ExchangeError:
         pass
-    return c_order
+    return None
+    
 
 
 def now_predict(COIN):
@@ -114,8 +122,14 @@ def now_order(exchange, y, p, COIN):
     return order#["id"]
 
 
+def order_switch(username):
+    if __name__ == "__main__":
+        return True
+    else:
+        return views.getexe(username)
+
 #予測と実行
-def order(apikey, secretkey):
+def order(apikey, secretkey,username):
     exchange = ccxt.binanceusdm({
         "apiKey": apikey,
         "secret": secretkey,
@@ -124,8 +138,8 @@ def order(apikey, secretkey):
     }
     })
 
-
-    while(True):#スイッチがオンの間
+    while(order_switch(username)):#スイッチがオンの間
+    
     #モデルで予測
         ypred = now_predict("ETH")
         #[[0.3230353  0.36189054 0.31507416]]
@@ -192,6 +206,7 @@ def order(apikey, secretkey):
                 c_order = cancel_order(exchange, order["id"], "ETH")
 
 
+
 def main():
     #key読み込み
     apikey = ""
@@ -205,7 +220,7 @@ def main():
                 secretkey = data[1]
     f.close()
 
-    order(apikey, secretkey)
+    order(apikey, secretkey,None)
 
 
 #他のファイルから呼び出したとき実行しないようにするために書く

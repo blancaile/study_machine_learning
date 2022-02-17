@@ -7,26 +7,30 @@
 <body>
  <h1><font color="red">{{ username }}</font>さんようこそ！！</h1>
 
- {% if api_key %}
- <p>あなたのAPI_keyは {{ api_key }} です．</p>
- <p>あなたのSECRET_keyは {{ secret_key }} です．</p>
 
- {% else %}
  <div class="reg">
-    <form method="post" action="{% url 'index' %}">
+   {%if execute == True %}
+   <form method="post" action="{% url 'index' %}">
       {% csrf_token %}
-  
+         <input type="hidden" name="username" value="{{ username }}">
+         <input type="hidden" name="type" value="stop">
+         <input type="submit" class="btn" value="停止">
+   </form>
+   {% else %}
+   <form method="post" action="{% url 'index' %}">
+      {% csrf_token %}
+      <input type="hidden" name="username" value="{{ username }}">
+      <input type="hidden" name="type" value="exe">
       <table class="reg_form">
       <tr>
       <td><label for="password">パスワード：</label></td>
       <td><input type="password" name="password"></td>
       </tr>
       </table>
-  
       <input type="submit" class="btn" value="実行">
    </form>
+   {% endif %}
   </div>
-  {% endif %}
 
 
 

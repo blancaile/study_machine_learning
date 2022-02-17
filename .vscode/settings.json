@@ -1,5 +1,6 @@
 {
     "python.analysis.extraPaths": [
-        "./cryptocurrency_bot"
+        "./cryptocurrency_bot",
+        "./web_ml"
     ]
 }

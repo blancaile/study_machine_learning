@@ -15,8 +15,8 @@ from . import models
 class SignupForm(forms.Form):
     username = forms.CharField(label="username")
     password = forms.CharField(label="password",widget=forms.PasswordInput())
-    api_key = forms.CharField(label="api_key")
-    secret_key = forms.CharField(label="secret_key")
+    api_key = forms.CharField(label="api_key",widget=forms.PasswordInput())
+    secret_key = forms.CharField(label="secret_key",widget=forms.PasswordInput())
 
 class ApplyForm(forms.Form):
     password = forms.CharField(label="password",widget=forms.PasswordInput())

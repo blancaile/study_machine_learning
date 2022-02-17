@@ -40,6 +40,8 @@ class CustomUser(AbstractBaseUser):
     password = models.CharField(verbose_name="password",max_length=100)
     api_key = models.BinaryField(verbose_name="api_key",max_length=500)#fieldsだとエラー
     secret_key = models.BinaryField(verbose_name="secret_key",max_length=500)#BinaryFieldはadmin pageで見ることができない
+    execute = models.BooleanField(default=False)
+
     is_active = models.BooleanField(default=True)
     is_admin = models.BooleanField(default=False)
 

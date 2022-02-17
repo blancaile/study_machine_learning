@@ -41,6 +41,10 @@ def decrypt(data,password):
     data = data.decode("utf-8")
     return data
 
+def getexe(username):
+    user = models.CustomUser.objects.get(username=username)
+    return user.execute
+
 #アカウント登録
 def create(request):
     if(request.method == "GET"):
@@ -73,29 +77,68 @@ def create(request):
 def temp(request):
     return redirect(to="signup")
 
+@login_required
+def exefalse(request):
+    user = models.CustomUser.objects.get(username=request.POST.get("username"))
+    user.execute = False
+    user.save()
+    params = {"username":user.username,
+            "execute":user.execute,
+            "password":None,
+            }
+    #return render(request, "login/home.html",context=params)
+    return redirect(to="index")
+
+@login_required
+def exetrue(request):
+    user = models.CustomUser.objects.get(username=request.POST.get("username"))
+    user.execute = True
+    user.save()
+    params = {"username":user.username,
+            "execute":user.execute,
+            "password":user.password,
+            }
+    #return render(request, "login/home.html",context=params)
+    return redirect(to="index")#リダイレクト時にGETになる
+
 #ホーム画面
 @login_required
 def index(request):
     user = models.CustomUser.objects.get(username=request.user.username)
-    #model = models.CustomUser()
-    #form = forms.ApplyForm()
-    if request.POST.get("password"):
+
+    if request.method == "POST" and user.execute == False:#実行ボタンが表示される
         #ここでパスワードチェックを入れる
         password_check = authenticate(request, username=user.username, password=request.POST.get("password"))
+
         if password_check:
-            # params = {"username": request.user.username,
-            # "api_key": decrypt(user.api_key, request.POST.get("password")),
-            # "secret_key": decrypt(user.secret_key, request.POST.get("password")),
-            # }
-            # return render(request, "login/home.html",context=params)
-            ml_bot.order(apikey=decrypt(user.api_key, request.POST.get("password")), secretkey=decrypt(user.secret_key, request.POST.get("password")))
+            apikey=decrypt(user.api_key, request.POST.get("password"))
+            secretkey=decrypt(user.secret_key, request.POST.get("password"))
+            
+            user.execute = True
+            user.save()
+            params = {"username":user.username,
+            "execute":user.execute,
+            }
+            
+            ml_bot.order(apikey=apikey, secretkey=secretkey, username = user.username)#非同期にする
+            return render(request, "login/home.html",context=params)
         else:
             return HttpResponse("パスワードが間違っています")
+    elif request.method == "POST" and user.execute:#停止ボタンが表示される
 
-    params = {"username":request.user.username,
-    }
+        user.execute = False
+        user.save()
+        params = {"username":request.user.username,
+        "execute":request.user.execute,
+        }
+
+        return render(request, "login/home.html",context=params)
     
-    return render(request, "login/home.html",context=params)
+    elif request.method == "GET":
+        params = {"username":request.user.username,
+        "execute":request.user.execute,
+        }
+        return render(request, "login/home.html",context=params)
 
 
 #ログイン
