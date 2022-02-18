@@ -9,7 +9,7 @@
 
 
  <div class="reg">
-   {%if execute == True %}
+   {% if execute == True%}
    <form method="post" action="{% url 'index' %}">
       {% csrf_token %}
          <input type="hidden" name="username" value="{{ username }}">

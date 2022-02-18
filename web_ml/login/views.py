@@ -106,7 +106,7 @@ def exetrue(request):
 def index(request):
     user = models.CustomUser.objects.get(username=request.user.username)
 
-    if request.method == "POST" and user.execute == False:#実行ボタンが表示される
+    if request.POST.get("type") == "exe":
         #ここでパスワードチェックを入れる
         password_check = authenticate(request, username=user.username, password=request.POST.get("password"))
 
@@ -121,24 +121,28 @@ def index(request):
             }
             
             ml_bot.order(apikey=apikey, secretkey=secretkey, username = user.username)#非同期にする
+
             return render(request, "login/home.html",context=params)
         else:
             return HttpResponse("パスワードが間違っています")
-    elif request.method == "POST" and user.execute:#停止ボタンが表示される
+
+    elif request.POST.get("type") == "stop":
 
         user.execute = False
         user.save()
-        params = {"username":request.user.username,
-        "execute":request.user.execute,
+        params = {"username":user.username,
+        "execute":user.execute,
         }
 
         return render(request, "login/home.html",context=params)
     
     elif request.method == "GET":
-        params = {"username":request.user.username,
-        "execute":request.user.execute,
+        params = {"username":user.username,
+        "execute":user.execute,
         }
         return render(request, "login/home.html",context=params)
+
+        #明日はelseをつけてみる
 
 
 #ログイン
