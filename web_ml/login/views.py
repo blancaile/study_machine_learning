@@ -19,6 +19,14 @@ sys.path.append("../cryptocurrency_bot/")
 import ml_bot
 #import cryptocurrency_bot
 # Create your views here.
+from celery import app
+from celery import shared_task
+from . import tasks
+
+
+@app.shared_task
+def ml_order2(apikey, secretkey, username):
+    ml_bot.order(apikey=apikey, secretkey=secretkey, username = username)#非同期にする
 
 def encrypt(data,password):
     K = hashlib.sha1(str(password).encode("utf-8")).hexdigest()
@@ -77,30 +85,6 @@ def create(request):
 def temp(request):
     return redirect(to="signup")
 
-@login_required
-def exefalse(request):
-    user = models.CustomUser.objects.get(username=request.POST.get("username"))
-    user.execute = False
-    user.save()
-    params = {"username":user.username,
-            "execute":user.execute,
-            "password":None,
-            }
-    #return render(request, "login/home.html",context=params)
-    return redirect(to="index")
-
-@login_required
-def exetrue(request):
-    user = models.CustomUser.objects.get(username=request.POST.get("username"))
-    user.execute = True
-    user.save()
-    params = {"username":user.username,
-            "execute":user.execute,
-            "password":user.password,
-            }
-    #return render(request, "login/home.html",context=params)
-    return redirect(to="index")#リダイレクト時にGETになる
-
 #ホーム画面
 @login_required
 def index(request):
@@ -120,7 +104,8 @@ def index(request):
             "execute":user.execute,
             }
             
-            ml_bot.order(apikey=apikey, secretkey=secretkey, username = user.username)#非同期にする
+            tasks.ml_order.delay(apikey, secretkey, user.username)
+            #ml_bot.order(apikey=apikey, secretkey=secretkey, username = user.username)#非同期にする
 
             return render(request, "login/home.html",context=params)
         else:

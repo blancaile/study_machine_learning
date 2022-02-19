@@ -139,7 +139,8 @@ def order(apikey, secretkey,username):
     })
 
     while(order_switch(username)):#スイッチがオンの間
-    
+        print(order_switch(username))
+
     #モデルで予測
         ypred = now_predict("ETH")
         #[[0.3230353  0.36189054 0.31507416]]
@@ -148,6 +149,7 @@ def order(apikey, secretkey,username):
         print("0,1,2 is", y)#0,1,2
         print(ypred[0][y]) #一番高い予測の確率表示
         #y = 2#テスト用
+        y = 1
 
 
         #予測結果がstayなら1分待つ
