@@ -23,6 +23,7 @@ from celery import app
 from celery import shared_task
 from . import tasks
 
+import ccxt
 
 @app.shared_task
 def ml_order2(apikey, secretkey, username):
@@ -66,6 +67,20 @@ def create(request):
         password = request.POST["password"] #なぜかパスワードが存在しない
         api_key = request.POST["api_key"]
         secret_key = request.POST["secret_key"]
+
+        #apikeyとsecretkeyの確認
+        try:
+            exchange = ccxt.binanceusdm({
+                "apiKey": api_key,
+                "secret": secret_key,
+                'options': {
+                "defaultType": "future",
+                }
+            })
+            balance = exchange.fetch_balance()["USDT"]["free"]
+        except:
+            return HttpResponse("api keyかsecret keyが間違っています")
+
        
         api_key = encrypt(api_key, password)#apiKey type is  <class 'bytes'>
         #print("apiKey type is ", type(api_key))
@@ -126,9 +141,6 @@ def index(request):
         "execute":user.execute,
         }
         return render(request, "login/home.html",context=params)
-
-        #明日はelseをつけてみる
-
 
 #ログイン
 def signup(request):
