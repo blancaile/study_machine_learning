@@ -10,6 +10,9 @@
 
  <div class="reg">
    {% if execute == True%}
+    <p>
+    停止ボタンを押すと取引を停止します
+    </p>
    <form method="post" action="{% url 'index' %}">
       {% csrf_token %}
          <input type="hidden" name="username" value="{{ username }}">
@@ -17,6 +20,9 @@
          <input type="submit" class="btn" value="停止">
    </form>
    {% else %}
+    <p>
+    パスワードを入力して実行ボタンを押すと自動で取引を行います
+    </p>
    <form method="post" action="{% url 'index' %}">
       {% csrf_token %}
       <input type="hidden" name="username" value="{{ username }}">
