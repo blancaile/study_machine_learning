@@ -7,7 +7,7 @@ tensorflow-2.7.0
 CUDA-11.5
 cuDNN-8.3
 
-## cryptocurrency_bot
+## [cryptocurrency_bot](https://github.com/blancaile/study_machine_learning/tree/main/cryptocurrency_bot)
 
 仮想通貨であるEthereumの価格を取得し、データを整え機械学習で5分後の上下を予測するモデルを作成するプログラムと、モデルを基に自動で発注を行うプログラムがあります。
 
