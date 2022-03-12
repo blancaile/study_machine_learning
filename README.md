@@ -11,7 +11,7 @@ cuDNN-8.3
 
 仮想通貨であるEthereumの価格を取得し、データを整え機械学習で5分後の上下を予測するモデルを作成するプログラムと、モデルを基に自動で発注を行うプログラムがあります。
 
-## web_ml
+## [web_ml](https://github.com/blancaile/study_machine_learning/tree/main/web_ml)
 cryptocurrency_botをWeb上で動作させるためのプログラムです。
 ログイン機能があります。
 
