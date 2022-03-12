@@ -1,5 +1,6 @@
 # cryptocurrency_bot
 
+仮想通貨であるEthereumの価格を取得し、データを整え機械学習で5分後の上下を予測するモデルを作成するmake_model_lightgbm.pyと、モデルを基に自動で発注を行うml_bot.pyがあります。
 
 ## 作成理由
 
