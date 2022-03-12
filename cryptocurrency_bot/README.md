@@ -21,7 +21,7 @@ Ethereumの価格データを基に特徴量を作成し、5分後の価格の�
 
 #### lightgbm
 
-lightgbmは機械学習のフレームワークです。最初はKerasのLSTMを用いていましたが、メモリの使用量を抑えることができるため、lightgbmに変更しました。
+lightgbmは機械学習のフレームワークです。最初はKerasのLSTMを使用していましたが、メモリの使用量を抑えることができるため、lightgbmに変更しました。
 
 ## ml_bot.py
 
