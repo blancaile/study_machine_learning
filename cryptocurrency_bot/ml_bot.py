@@ -141,6 +141,7 @@ def order(apikey, secretkey,username):
     while(order_switch(username)):#スイッチがオンの間
         print(order_switch(username))
 
+
     #モデルで予測
         ypred = now_predict("ETH")
         #[[0.3230353  0.36189054 0.31507416]]
@@ -149,7 +150,7 @@ def order(apikey, secretkey,username):
         print("0,1,2 is", y)#0,1,2
         print(ypred[0][y]) #一番高い予測の確率表示
         #y = 2#テスト用
-        y = 1
+        #y = 1
 
 
         #予測結果がstayなら1分待つ
@@ -162,7 +163,7 @@ def order(apikey, secretkey,username):
             order = now_order(exchange, y, ypred[0][y], "ETH")
             sleep(1)
 
-            trades = fetch_my_trades(exchange, "ETH")
+            trades = fetch_my_trades(exchange, "ETH")#一日の最初は取れない
             print(" ")
             print(trades[-1])
             #trades = exchange.fetch_order_trades(order["id"],symbol="ETH/USDT")#fetch order trades はspot only
