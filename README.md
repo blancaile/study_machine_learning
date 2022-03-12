@@ -15,6 +15,6 @@ cuDNN-8.3
 cryptocurrency_botをWeb上で動作させるためのプログラムです。
 ログイン機能があります。
 
-## decryption_homophonic_cipher
+## [decryption_homophonic_cipher](https://github.com/blancaile/study_machine_learning/tree/main/decryption_homophonic_cipher)
 homophonic cipherを解く際の補助に使うプログラムです。
 アルファベットと連続した文字列の頻度分析ができます。
